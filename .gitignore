@@ -1,0 +1,52 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+**/__pycache__/
+_pycache_/
+**/_pycache_/
+
+# Virtual environment
+env/
+venv/
+.env
+.env.*
+
+# Django specific
+*.log
+db.sqlite3
+*.sqlite3
+media/
+media_root/*
+staticfiles/
+static_root/
+
+# VS Code
+.vscode/
+
+# JetBrains IDEs (e.g. PyCharm)
+.idea/
+
+# Ignore uploaded profile pictures
+static/profiles
+
+# macOS system file
+.DS_Store
+
+# Windows system file
+Thumbs.db
+
+# pytest
+.pytest_cache/
+
+# Coverage reports
+.coverage
+htmlcov/
+
+enc.json
+enc.py
+config.json
+django.txt
+backup/*
