@@ -11,6 +11,7 @@ A secure and user-friendly password manager built with Django, designed to help
     <li>Responsive UI enhanced with Bootstrap and AJAX for seamless user experience</li>
     <li>Optional multi-factor authentication for added security</li>
 </ul>
+
 # Technologies Used
  <ul>
     <li>Python 3.x and Django Web Framework</li>
