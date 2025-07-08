@@ -3,6 +3,87 @@
 <div class="card mx-auto shadow-sm" style="max-width: 500px;">
   <div class="card-body">
     <h4 class="card-title mb-4">Create an Account</h4>
+    <form method="post" id="register-form">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Username</label>
+        {{ form.username }}
+        <div class="invalid-feedback" id="username-error">Username is already taken.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        {{ form.email }}
+        <div class="invalid-feedback" id="email-error">Email is already in use.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        {{ form.password1 }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Confirm Password</label>
+        {{ form.password2 }}
+        <div class="invalid-feedback" id="password-error">Passwords do not match.</div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Register</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const usernameInput = document.getElementById("id_username");
+  const emailInput = document.getElementById("id_email");
+  const pass1Input = document.getElementById("id_password1");
+  const pass2Input = document.getElementById("id_password2");
+
+  function validateField(field, value, errorDivId) {
+    fetch("{% url 'validate_field' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `field=${field}&value=${value}`
+    })
+    .then(res => res.json())
+    .then(data => {
+      const errorDiv = document.getElementById(errorDivId);
+      if (data.exists) {
+        document.getElementById(`id_${field}`).classList.add("is-invalid");
+        errorDiv.style.display = "block";
+      } else {
+        document.getElementById(`id_${field}`).classList.remove("is-invalid");
+        errorDiv.style.display = "none";
+      }
+    });
+  }
+
+  usernameInput.addEventListener("blur", () => {
+    validateField("username", usernameInput.value, "username-error");
+  });
+
+  emailInput.addEventListener("blur", () => {
+    validateField("email", emailInput.value, "email-error");
+  });
+
+  pass2Input.addEventListener("keyup", () => {
+    const errorDiv = document.getElementById("password-error");
+    if (pass1Input.value !== pass2Input.value) {
+      pass2Input.classList.add("is-invalid");
+      errorDiv.style.display = "block";
+    } else {
+      pass2Input.classList.remove("is-invalid");
+      errorDiv.style.display = "none";
+    }
+  });
+</script>
+{% endblock %}
+
+
+{% comment %} {% extends 'vault/base.html' %}
+{% block content %}
+<div class="card mx-auto shadow-sm" style="max-width: 500px;">
+  <div class="card-body">
+    <h4 class="card-title mb-4">Create an Account</h4>
     <form method="post">
       {% csrf_token %}
       {{ form.non_field_errors }}
@@ -34,4 +115,5 @@
     </p>
   </div>
 </div>
-{% endblock %}
+{% endblock %} {% endcomment %}
+

@@ -13,7 +13,14 @@
         <label class="form-label">Password</label>
         <input type="password" name="password" class="form-control" required>
       </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
+        <label class="form-check-label" for="rememberMe">Remember me</label>
+      </div>
       <button type="submit" class="btn btn-success w-100">Login</button>
+      <p class="mt-3 text-center">
+        <a href="{% url 'password_reset' %}">Forgot your password?</a>
+      </p>
     </form>
     <p class="mt-3 text-center">
       Don't have an account? <a href="{% url 'register' %}">Register</a>
