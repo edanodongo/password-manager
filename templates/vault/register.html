@@ -1,4 +1,6 @@
 {% extends 'vault/base.html' %}
+{% load form_tags %}
+
 {% block content %}
 <div class="card mx-auto shadow-sm" style="max-width: 500px;">
   <div class="card-body">
@@ -6,22 +8,22 @@
     <form method="post" id="register-form">
       {% csrf_token %}
       <div class="mb-3">
-        <label class="form-label">Username</label>
-        {{ form.username }}
+        <label class="form-label" for="id_username">Username</label>
+        {{ form.username|add_class:"form-control" }}
         <div class="invalid-feedback" id="username-error">Username is already taken.</div>
       </div>
       <div class="mb-3">
-        <label class="form-label">Email</label>
-        {{ form.email }}
+        <label class="form-label" for="id_email">Email</label>
+        {{ form.email|add_class:"form-control" }}
         <div class="invalid-feedback" id="email-error">Email is already in use.</div>
       </div>
       <div class="mb-3">
-        <label class="form-label">Password</label>
-        {{ form.password1 }}
+        <label class="form-label" for="id_password1">Password</label>
+        {{ form.password1|add_class:"form-control" }}
       </div>
       <div class="mb-3">
-        <label class="form-label">Confirm Password</label>
-        {{ form.password2 }}
+        <label class="form-label" for="id_password2">Confirm Password</label>
+        {{ form.password2|add_class:"form-control" }}
         <div class="invalid-feedback" id="password-error">Passwords do not match.</div>
       </div>
       <button type="submit" class="btn btn-primary w-100">Register</button>
