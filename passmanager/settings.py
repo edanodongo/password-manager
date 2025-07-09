@@ -133,12 +133,28 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Static files URL prefix
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# Tell Django to look for static files both inside the app and in the global static folder
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),  # Global static folder outside the app
+]
+
+# Only used in production (when running `collectstatic`)
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # This should NOT be the same as STATICFILES_DIRS
+
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
