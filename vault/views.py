@@ -75,11 +75,6 @@ def create_credential(request):
         cred.save()
 
 
-# dashboard/views.py
-# from django.shortcuts import render
-
-# def dashboard(request):
-#     return render(request, 'dashboard/dashboard.html')
 
 
 
@@ -88,6 +83,8 @@ from .forms import CredentialForm
 from .models import Credential
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 
 @login_required
 def dashboard(request):
@@ -101,7 +98,13 @@ def dashboard(request):
             Q(url_or_developer__icontains=search_query)
         )
 
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('vault/partials/credential_list.html', {'credentials': credentials})
+        return JsonResponse({'html': html})
+
     return render(request, 'dashboard/dashboard.html', {'credentials': credentials, 'search_query': search_query})
+
+
 
 @login_required
 def add_credential(request):
