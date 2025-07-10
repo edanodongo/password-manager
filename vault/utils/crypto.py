@@ -5,7 +5,8 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
 
 # 32-byte key (AES-256)
-KEY = os.environ.get('ENCRYPTION_KEY', 'fallback-key-must-be-32-bytes!').encode('utf-8')
+# KEY = os.environ.get('ENCRYPTION_KEY', 'fallback-key-must-be-32-bytes!').encode('utf-8')
+KEY = base64.b64decode(os.environ.get('ENCRYPTION_KEY'))
 
 def get_cipher(iv):
     return Cipher(algorithms.AES(KEY), modes.CBC(iv), backend=default_backend())
