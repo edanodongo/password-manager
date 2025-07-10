@@ -33,7 +33,7 @@
   <div class="container">
     <a class="navbar-brand mx-auto d-block text-center" href="#" style="width:100%;">🔐 Password Vault</a>
     {% if user.is_authenticated %}
-      <span class="text-white">Hi, fefe{{ user.username }}</span>
+      <span class="text-white">Hi, {{ user.username }}</span>
       <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm ms-2">Logout</a>
     {% else %}
       <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm ms-auto">Login</a>

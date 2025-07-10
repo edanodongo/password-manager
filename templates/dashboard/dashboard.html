@@ -1,28 +1,55 @@
 {% extends 'vault/base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4>Your Credentials</h4>
-  <a href="{% url 'add_credential' %}" class="btn btn-sm btn-primary">+ Add</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-primary">Your Credentials</h4>
+    <a href="{% url 'add_credential' %}" class="btn btn-sm btn-success shadow-sm px-4 py-2">
+        <i class="bi bi-plus-circle"></i> Add
+    </a>
 </div>
 
-<form method="get" class="mb-3">
-  <input type="text" name="q" placeholder="Search..." class="form-control" value="{{ search_query }}">
+<form method="get" class="mb-4">
+    <div class="input-group">
+        <input type="text" name="q" placeholder="Search..." class="form-control rounded-start" value="{{ search_query }}">
+        <button class="btn btn-outline-primary rounded-end" type="submit">
+            <i class="bi bi-search"></i> Search
+        </button>
+    </div>
 </form>
 
+<div class="row">
 {% for cred in credentials %}
-  <div class="card mb-2">
-    <div class="card-body">
-      <h5>{{ cred.name }} <small class="text-muted">({{ cred.platform_type }})</small></h5>
-      <p><strong>Username:</strong> {{ cred.username }}<br>
-      <strong>Password:</strong> {{ cred.get_password }}<br>
-      <strong>URL/Developer:</strong> {{ cred.url_or_developer }}</p>
-      <a href="{% url 'edit_credential' cred.pk %}" class="btn btn-sm btn-warning">Edit</a>
-      <a href="{% url 'delete_credential' cred.pk %}" class="btn btn-sm btn-danger">Delete</a>
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="card-title text-info mb-2">
+                    <i class="bi bi-shield-lock-fill me-1"></i>{{ cred.name }}
+                    <small class="text-muted">({{ cred.platform_type }})</small>
+                </h5>
+                <ul class="list-unstyled mb-3">
+                    <li><strong>Username:</strong> <span class="text-dark">{{ cred.username }}</span></li>
+                    <li><strong>Password:</strong> <span class="text-dark">{{ cred.get_password }}</span></li>
+                    <li><strong>URL/Developer:</strong> <span class="text-dark">{{ cred.url_or_developer }}</span></li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'edit_credential' cred.pk %}" class="btn btn-sm btn-outline-warning flex-fill">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </a>
+                    <a href="{% url 'delete_credential' cred.pk %}" class="btn btn-sm btn-outline-danger flex-fill">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 {% empty %}
-  <p>No credentials found.</p>
+    <div class="col-12">
+        <div class="alert alert-info text-center shadow-sm">No credentials found.</div>
+    </div>
 {% endfor %}
+</div>
+
+<!-- Optionally include Bootstrap Icons CDN for icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 {% endblock %}
 
 
