@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'vault',  # Custom app for managing passwords
+    'vault', 
+    'crispy_forms',
     'django_otp',
     'django_otp.plugins.otp_totp',
     'two_factor',
