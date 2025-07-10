@@ -76,7 +76,60 @@ def create_credential(request):
 
 
 # dashboard/views.py
-from django.shortcuts import render
+# from django.shortcuts import render
 
+# def dashboard(request):
+#     return render(request, 'dashboard/dashboard.html')
+
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from .forms import CredentialForm
+from .models import Credential
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+
+@login_required
 def dashboard(request):
-    return render(request, 'dashboard/dashboard.html')
+    search_query = request.GET.get('q', '')
+    credentials = Credential.objects.filter(user=request.user)
+
+    if search_query:
+        credentials = credentials.filter(
+            Q(name__icontains=search_query) |
+            Q(username__icontains=search_query) |
+            Q(url_or_developer__icontains=search_query)
+        )
+
+    return render(request, 'dashboard/dashboard.html', {'credentials': credentials, 'search_query': search_query})
+
+@login_required
+def add_credential(request):
+    if request.method == 'POST':
+        form = CredentialForm(request.POST)
+        if form.is_valid():
+            form.save(user=request.user)
+            return redirect('dashboard')
+    else:
+        form = CredentialForm()
+    return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Add Credential'})
+
+@login_required
+def edit_credential(request, pk):
+    cred = get_object_or_404(Credential, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = CredentialForm(request.POST, instance=cred)
+        if form.is_valid():
+            form.save(user=request.user)
+            return redirect('dashboard')
+    else:
+        form = CredentialForm(instance=cred)
+    return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
+
+@login_required
+def delete_credential(request, pk):
+    cred = get_object_or_404(Credential, pk=pk, user=request.user)
+    if request.method == 'POST':
+        cred.delete()
+        return redirect('dashboard')
+    return render(request, 'vault/delete_confirm.html', {'credential': cred})
