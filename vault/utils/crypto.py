@@ -1,12 +1,12 @@
+from django.conf import settings
 import base64
-import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
+import os
 
-# 32-byte key (AES-256)
-# KEY = os.environ.get('ENCRYPTION_KEY', 'fallback-key-must-be-32-bytes!').encode('utf-8')
-KEY = base64.b64decode(os.environ.get('ENCRYPTION_KEY'))
+KEY = base64.b64decode(settings.ENCRYPTION_KEY)
+
 
 def get_cipher(iv):
     return Cipher(algorithms.AES(KEY), modes.CBC(iv), backend=default_backend())

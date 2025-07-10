@@ -132,6 +132,9 @@ USE_I18N = True
 
 USE_TZ = True
 
+from decouple import config
+
+ENCRYPTION_KEY = config('ENCRYPTION_KEY')
 
 
 import os

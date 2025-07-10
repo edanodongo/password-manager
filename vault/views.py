@@ -59,7 +59,23 @@ def validate_field(request):
         response["exists"] = User.objects.filter(email=value).exists()
     return JsonResponse(response)
 
+from .models import Credential
 
+def create_credential(request):
+    if request.method == 'POST':
+        # example only — form handling omitted
+        cred = Credential(
+            user=request.user,
+            platform_type='website',
+            name='Gmail',
+            username='you@gmail.com',
+            url_or_developer='https://gmail.com',
+        )
+        cred.set_password('your-secret-password')
+        cred.save()
+
+
+# dashboard/views.py
 from django.shortcuts import render
 
 def dashboard(request):
