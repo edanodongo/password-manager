@@ -59,3 +59,8 @@ def validate_field(request):
         response["exists"] = User.objects.filter(email=value).exists()
     return JsonResponse(response)
 
+
+from django.shortcuts import render
+
+def dashboard(request):
+    return render(request, 'dashboard/dashboard.html')
