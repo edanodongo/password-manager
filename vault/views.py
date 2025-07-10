@@ -186,16 +186,26 @@ def profile_settings(request):
 
 from django.contrib.auth.decorators import login_required
 from .models import LoginRecord, SecurityLog
+from django.contrib.auth.decorators import login_required
+from django_otp.plugins.otp_static.models import StaticDevice
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from .models import LoginRecord, SecurityLog
 
 @login_required
 def user_profile(request):
-    login_logs = LoginRecord.objects.filter(user=request.user).order_by('-timestamp')[:10]
-    security_logs = SecurityLog.objects.filter(user=request.user).order_by('-timestamp')[:10]
+    user = request.user
+    mfa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     
+    login_logs = LoginRecord.objects.filter(user=user).order_by('-timestamp')[:5]
+    security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:5]
+
     return render(request, 'account/profile.html', {
+        'user': user,
+        'mfa_enabled': mfa_enabled,
         'login_logs': login_logs,
         'security_logs': security_logs,
     })
+
 
 
 @login_required

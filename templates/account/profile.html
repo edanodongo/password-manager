@@ -1,46 +1,70 @@
 {% extends 'vault/base.html' %}
 {% block content %}
+
 <div class="container py-4">
-    <h3 class="text-primary fw-bold mb-4">User Profile</h3>
-
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h5 class="card-title text-secondary">Recent Login Activity</h5>
-                    <ul class="list-group list-group-flush">
-                        {% for log in login_logs %}
-                        <li class="list-group-item">
-                            <strong>{{ log.timestamp|date:"Y-m-d H:i" }}</strong><br>
-                            IP: {{ log.ip_address }}<br>
-                            Agent: <small>{{ log.user_agent|truncatechars:50 }}</small>
-                        </li>
-                        {% empty %}
-                        <li class="list-group-item text-muted">No login records available.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body">
+          <h4 class="fw-bold text-primary mb-3">
+            <i class="bi bi-person-circle me-2"></i> User Profile
+          </h4>
+          <p><strong>Username:</strong> {{ user.username }}</p>
+          <p><strong>Email:</strong> {{ user.email }}</p>
+          <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+          <p>
+            <strong>Two-Factor Auth:</strong>
+            {% if mfa_enabled %}
+              <span class="badge bg-success">Enabled</span>
+            {% else %}
+              <span class="badge bg-danger">Disabled</span>
+              <a href="{% url 'two_factor:setup' %}" class="btn btn-sm btn-outline-primary ms-2">Set Up Now</a>
+            {% endif %}
+          </p>
         </div>
+      </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h5 class="card-title text-secondary">Security Actions</h5>
-                    <ul class="list-group list-group-flush">
-                        {% for log in security_logs %}
-                        <li class="list-group-item">
-                            <strong>{{ log.timestamp|date:"Y-m-d H:i" }}</strong><br>
-                            Action: {{ log.action }}<br>
-                            {{ log.description }}
-                        </li>
-                        {% empty %}
-                        <li class="list-group-item text-muted">No security logs recorded.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+      <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body">
+          <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-clock-history me-2"></i> Recent Login History</h5>
+          {% if login_logs %}
+            <ul class="list-group list-group-flush">
+              {% for log in login_logs %}
+                <li class="list-group-item small">
+                  <i class="bi bi-box-arrow-in-right text-primary me-1"></i>
+                  {{ log.timestamp|date:"M d, Y H:i" }} – {{ log.user_agent }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted">No login records available.</p>
+          {% endif %}
         </div>
+      </div>
+
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-shield-check me-2"></i> Recent Security Activity</h5>
+          {% if security_logs %}
+            <ul class="list-group list-group-flush">
+              {% for log in security_logs %}
+                <li class="list-group-item small">
+                  <i class="bi bi-activity text-warning me-1"></i>
+                  {{ log.timestamp|date:"M d, Y H:i" }} – {{ log.action }}: {{ log.description }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted">No security logs available.</p>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
+  </div>
 </div>
+
+<!-- Bootstrap Icons CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 {% endblock %}
+
