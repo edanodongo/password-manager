@@ -1,5 +1,7 @@
 {% extends 'vault/base.html' %}
+{% load static %}
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold text-primary">Your Credentials</h4>
     <a href="{% url 'add_credential' %}" class="btn btn-sm btn-success shadow-sm px-4 py-2">
@@ -7,120 +9,54 @@
     </a>
 </div>
 
-<form method="get" class="mb-4">
+<form method="get" class="mb-4" id="search-form">
     <div class="input-group">
-        <input type="text" name="q" placeholder="Search..." class="form-control rounded-start" value="{{ search_query }}">
+        <input type="text" name="q" placeholder="Search..." class="form-control rounded-start" id="search-input" value="{{ search_query }}">
         <button class="btn btn-outline-primary rounded-end" type="submit">
             <i class="bi bi-search"></i> Search
         </button>
     </div>
 </form>
 
-<div class="row">
-{% for cred in credentials %}
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body">
-                <h5 class="card-title text-info mb-2">
-                    <i class="bi bi-shield-lock-fill me-1"></i>{{ cred.name }}
-                    <small class="text-muted">({{ cred.platform_type }})</small>
-                </h5>
-                <ul class="list-unstyled mb-3">
-                    <li><strong>Username:</strong> <span class="text-dark">{{ cred.username }}</span></li>
-                    <li><strong>Password:</strong> <span class="text-dark">{{ cred.get_password }}</span></li>
-                    <li><strong>URL/Developer:</strong> <span class="text-dark">{{ cred.url_or_developer }}</span></li>
-                </ul>
-                <div class="d-flex gap-2">
-                    <a href="{% url 'edit_credential' cred.pk %}" class="btn btn-sm btn-outline-warning flex-fill">
-                        <i class="bi bi-pencil-square"></i> Edit
-                    </a>
-                    <a href="{% url 'delete_credential' cred.pk %}" class="btn btn-sm btn-outline-danger flex-fill">
-                        <i class="bi bi-trash"></i> Delete
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-{% empty %}
-    <div class="col-12">
-        <div class="alert alert-info text-center shadow-sm">No credentials found.</div>
-    </div>
-{% endfor %}
+<div class="row" id="credential-results">
+{% include 'vault/partials/credential_list.html' %}
 </div>
 
-<!-- Optionally include Bootstrap Icons CDN for icons -->
+<!-- Bootstrap Icons CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<!-- AJAX Search & Toggle Script -->
+<script>
+  const searchInput = document.getElementById('search-input');
+  const resultsDiv = document.getElementById('credential-results');
+
+  searchInput.addEventListener('input', () => {
+    fetch(`?q=${encodeURIComponent(searchInput.value)}`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+      resultsDiv.innerHTML = data.html;
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('btn-toggle-password')) {
+      const btn = e.target;
+      const span = btn.previousElementSibling;
+      const isVisible = span.classList.contains('visible-password');
+
+      if (isVisible) {
+        span.textContent = '********';
+        span.classList.remove('visible-password');
+        btn.textContent = 'Show';
+      } else {
+        span.textContent = span.dataset.password;
+        span.classList.add('visible-password');
+        btn.textContent = 'Hide';
+      }
+    }
+  });
+</script>
+
 {% endblock %}
-
-
-{% comment %} <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Cybersecurity 3D</title>
-    <style>
-        body { margin: 0; background: #0d1b2a; color: #fff; font-family: Arial, sans-serif; }
-        #cyber3d { width: 100vw; height: 70vh; display: block; }
-        .header { text-align: center; margin: 20px; }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-<body>
-    <div class="header">
-        <h1>Cybersecurity 3D Experience</h1>
-        <p>Visualize digital defense in a 3D world!</p>
-    </div>
-    <canvas id="cyber3d"></canvas>
-    <script>
-        // Basic Three.js setup
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0d1b2a);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight*0.7, 0.1, 1000);
-        camera.position.z = 5;
-
-        const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('cyber3d')});
-        renderer.setSize(window.innerWidth, window.innerHeight * 0.7);
-
-        // 3D Cybersecurity Elements
-        // A shield (symbolizing protection)
-        const shieldGeometry = new THREE.CylinderGeometry(1, 1, 0.2, 32);
-        const shieldMaterial = new THREE.MeshPhongMaterial({color: 0x00b4d8, shininess: 100});
-        const shield = new THREE.Mesh(shieldGeometry, shieldMaterial);
-        shield.rotation.x = Math.PI / 2;
-        scene.add(shield);
-
-        // Binary code particles (symbolizing data)
-        for (let i = 0; i < 30; i++) {
-            const geometry = new THREE.SphereGeometry(0.05, 8, 8);
-            const material = new THREE.MeshBasicMaterial({color: 0x90e0ef});
-            const sphere = new THREE.Mesh(geometry, material);
-            sphere.position.set(
-                (Math.random() - 0.5) * 4,
-                (Math.random() - 0.5) * 2,
-                (Math.random() - 0.5) * 4
-            );
-            scene.add(sphere);
-        }
-
-        // Lighting
-        const light = new THREE.PointLight(0xffffff, 1, 100);
-        light.position.set(0, 2, 5);
-        scene.add(light);
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            shield.rotation.z += 0.01;
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / (window.innerHeight*0.7);
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight*0.7);
-        });
-    </script>
-</body>
-</html> {% endcomment %}
