@@ -220,3 +220,34 @@ def change_password(request):
     else:
         form = PasswordChangeForm(request.user)
     return render(request, 'account/change_password.html', {'form': form})
+
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from .forms import ProfileUpdateForm
+from .models import SecurityLog
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django_otp.plugins.otp_totp.models import TOTPDevice
+
+@login_required
+def profile_view(request):
+    user = request.user
+    mfa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+    security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:10]
+
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, user)  # Important: Keep user logged in after password change
+            messages.success(request, 'Profile updated successfully.')
+            return redirect('profile')
+    else:
+        form = ProfileUpdateForm(instance=user)
+
+    return render(request, 'account/profile.html', {
+        'form': form,
+        'mfa_enabled': mfa_enabled,
+        'security_logs': security_logs
+    })

@@ -18,7 +18,8 @@ urlpatterns = [
     path('account/profile/', views.profile_settings, name='profile_settings'),
     path('account/change-password/', views.change_password, name='change_password'),
 
-    path('profile/', views.user_profile, name='user_profile'),
+    #path('profile/', views.user_profile, name='user_profile'),
+    path('profile/', views.profile_view, name='profile'),
 
     # Password reset request form
     path('password_reset/', auth_views.PasswordResetView.as_view(
