@@ -16,6 +16,7 @@
       {% else %}
         <p class="text-danger">⚠️ 2FA is <strong>not enabled</strong> on this account.</p>
         <a href="{% url 'two_factor:setup' %}" class="btn btn-primary">Enable 2FA</a>
+        <a href="{% url 'two_factor:backup_tokens' %}" class="btn btn-outline-primary mt-2">View Backup Codes</a>
       {% endif %}
     </div>
   </div>

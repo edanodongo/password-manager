@@ -14,6 +14,9 @@ urlpatterns = [
     path('add/', views.add_credential, name='add_credential'),
     path('edit/<int:pk>/', views.edit_credential, name='edit_credential'),
     path('delete/<int:pk>/', views.delete_credential, name='delete_credential'),
+    
+    path('account/profile/', views.profile_settings, name='profile_settings'),
+    path('account/change-password/', views.change_password, name='change_password'),
 
     # Password reset request form
     path('password_reset/', auth_views.PasswordResetView.as_view(

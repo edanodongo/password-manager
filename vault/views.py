@@ -3,6 +3,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from .forms import RegisterForm
 from django.contrib import messages
+from django_otp.decorators import otp_required
+
 
 def register_view(request):
     if request.method == 'POST':
@@ -15,6 +17,7 @@ def register_view(request):
         form = RegisterForm()
     return render(request, 'vault/register.html', {'form': form})
 
+@otp_required
 def login_view(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -76,8 +79,6 @@ def create_credential(request):
 
 
 
-
-
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import CredentialForm
 from .models import Credential
@@ -117,6 +118,7 @@ def add_credential(request):
         form = CredentialForm()
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Add Credential'})
 
+@otp_required
 @login_required
 def edit_credential(request, pk):
     cred = get_object_or_404(Credential, pk=pk, user=request.user)
@@ -129,6 +131,7 @@ def edit_credential(request, pk):
         form = CredentialForm(instance=cred)
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
 
+@otp_required
 @login_required
 def delete_credential(request, pk):
     cred = get_object_or_404(Credential, pk=pk, user=request.user)
@@ -136,3 +139,29 @@ def delete_credential(request, pk):
         cred.delete()
         return redirect('dashboard')
     return render(request, 'vault/delete_confirm.html', {'credential': cred})
+
+
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.contrib import messages
+
+@login_required
+def profile_settings(request):
+    if request.method == 'POST':
+        request.user.email = request.POST.get('email')
+        request.user.save()
+        messages.success(request, "Profile updated.")
+    return render(request, 'vault/account/profile_settings.html')
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('profile_settings')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'vault/account/change_password.html', {'form': form})
