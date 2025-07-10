@@ -1,14 +1,20 @@
 {% extends 'vault/base.html' %}
+{% load static %}
 {% block content %}
 
 <div class="container py-4">
   <div class="row justify-content-center">
     <div class="col-lg-8">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold text-primary"><i class="bi bi-person-circle me-2"></i>User Profile</h4>
+        <button class="btn btn-sm btn-outline-dark" id="toggle-theme">
+          <i class="bi bi-moon-stars"></i> Dark Mode
+        </button>
+      </div>
+
+      <!-- Basic Info -->
       <div class="card shadow-sm mb-4 border-0">
         <div class="card-body">
-          <h4 class="fw-bold text-primary mb-3">
-            <i class="bi bi-person-circle me-2"></i> User Profile
-          </h4>
           <p><strong>Username:</strong> {{ user.username }}</p>
           <p><strong>Email:</strong> {{ user.email }}</p>
           <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
@@ -16,6 +22,7 @@
             <strong>Two-Factor Auth:</strong>
             {% if mfa_enabled %}
               <span class="badge bg-success">Enabled</span>
+              <a href="{% url 'two_factor:disable' %}" class="btn btn-sm btn-outline-danger ms-2">Disable</a>
             {% else %}
               <span class="badge bg-danger">Disabled</span>
               <a href="{% url 'two_factor:setup' %}" class="btn btn-sm btn-outline-primary ms-2">Set Up Now</a>
@@ -24,27 +31,22 @@
         </div>
       </div>
 
+      <!-- Profile Update Form -->
       <div class="card shadow-sm mb-4 border-0">
         <div class="card-body">
-          <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-clock-history me-2"></i> Recent Login History</h5>
-          {% if login_logs %}
-            <ul class="list-group list-group-flush">
-              {% for log in login_logs %}
-                <li class="list-group-item small">
-                  <i class="bi bi-box-arrow-in-right text-primary me-1"></i>
-                  {{ log.timestamp|date:"M d, Y H:i" }} – {{ log.user_agent }}
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <p class="text-muted">No login records available.</p>
-          {% endif %}
+          <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-pencil me-2"></i>Update Profile</h5>
+          <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary mt-2">Update</button>
+          </form>
         </div>
       </div>
 
-      <div class="card shadow-sm border-0">
+      <!-- Security Logs and Login History (Reuse from previous step) -->
+      <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-          <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-shield-check me-2"></i> Recent Security Activity</h5>
+          <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-shield-check me-2"></i>Recent Security Activity</h5>
           {% if security_logs %}
             <ul class="list-group list-group-flush">
               {% for log in security_logs %}
@@ -66,5 +68,19 @@
 
 <!-- Bootstrap Icons CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-{% endblock %}
 
+<!-- Dark Mode Toggle -->
+<script>
+  const toggleBtn = document.getElementById('toggle-theme');
+  toggleBtn.addEventListener('click', () => {
+    document.body.classList.toggle('bg-dark');
+    document.body.classList.toggle('text-white');
+    document.querySelectorAll('.card').forEach(card => {
+      card.classList.toggle('bg-dark');
+      card.classList.toggle('text-white');
+      card.classList.toggle('border-light');
+    });
+  });
+</script>
+
+{% endblock %}
