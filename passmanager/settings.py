@@ -41,8 +41,9 @@ INSTALLED_APPS = [
     'vault', 
     'crispy_forms',
     'django_otp',
-    'django_otp.plugins.otp_totp',
     'two_factor',
+    'django_otp.plugins.otp_totp',  # TOTP (e.g., Google Authenticator)
+    'django_otp.plugins.otp_static',  # for backup tokens
 ]
 
 MIDDLEWARE = [
@@ -50,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django_otp.middleware.OTPMiddleware',  # <- ADD THIS
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

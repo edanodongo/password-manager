@@ -1,0 +1,46 @@
+{% extends 'vault/base.html' %}
+{% block content %}
+<div class="container py-4">
+    <h3 class="text-primary fw-bold mb-4">User Profile</h3>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title text-secondary">Recent Login Activity</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for log in login_logs %}
+                        <li class="list-group-item">
+                            <strong>{{ log.timestamp|date:"Y-m-d H:i" }}</strong><br>
+                            IP: {{ log.ip_address }}<br>
+                            Agent: <small>{{ log.user_agent|truncatechars:50 }}</small>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">No login records available.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title text-secondary">Security Actions</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for log in security_logs %}
+                        <li class="list-group-item">
+                            <strong>{{ log.timestamp|date:"Y-m-d H:i" }}</strong><br>
+                            Action: {{ log.action }}<br>
+                            {{ log.description }}
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">No security logs recorded.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,7 +3,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from .forms import RegisterForm
 from django.contrib import messages
-from django_otp.decorators import otp_required
+from vault.decorators import otp_optional
+from django_otp import user_has_device
+from .models import Credential, SecurityLog
 
 
 def register_view(request):
@@ -17,7 +19,6 @@ def register_view(request):
         form = RegisterForm()
     return render(request, 'vault/register.html', {'form': form})
 
-@otp_required
 def login_view(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -62,7 +63,6 @@ def validate_field(request):
         response["exists"] = User.objects.filter(email=value).exists()
     return JsonResponse(response)
 
-from .models import Credential
 
 def create_credential(request):
     if request.method == 'POST':
@@ -89,6 +89,11 @@ from django.template.loader import render_to_string
 
 @login_required
 def dashboard(request):
+    
+    # 2FA Setup Prompt
+    # if not request.user.is_verified and not user_has_device(request.user):
+    #     messages.warning(request, "For better security, enable 2FA in your account settings.")
+    
     search_query = request.GET.get('q', '')
     credentials = Credential.objects.filter(user=request.user)
 
@@ -109,6 +114,7 @@ def dashboard(request):
 
 @login_required
 def add_credential(request):
+   
     if request.method == 'POST':
         form = CredentialForm(request.POST)
         if form.is_valid():
@@ -118,9 +124,22 @@ def add_credential(request):
         form = CredentialForm()
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Add Credential'})
 
-@otp_required
+# @otp_optional
 @login_required
 def edit_credential(request, pk):
+    # Show message to users without 2FA
+    # if not request.user.is_verified and not user_has_device(request.user):
+    #     messages.info(request, "🔒 For enhanced security, consider enabling 2FA in your account settings.")
+
+    credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
+    
+    SecurityLog.objects.create(
+    user=request.user,
+    action="edit_credential",
+    description=f"Edited credential: {credential.name}"
+)
+
+
     cred = get_object_or_404(Credential, pk=pk, user=request.user)
     if request.method == 'POST':
         form = CredentialForm(request.POST, instance=cred)
@@ -131,9 +150,21 @@ def edit_credential(request, pk):
         form = CredentialForm(instance=cred)
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
 
-@otp_required
+# @otp_optional
 @login_required
 def delete_credential(request, pk):
+    # Show message to users without 2FA
+    # if not request.user.is_verified and not user_has_device(request.user):
+    #     messages.info(request, "🔒 For enhanced security, consider enabling 2FA in your account settings.")
+
+    credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
+
+    SecurityLog.objects.create(
+    user=request.user,
+    action="edit_credential",
+    description=f"Edited credential: {credential.name}"
+)
+
     cred = get_object_or_404(Credential, pk=pk, user=request.user)
     if request.method == 'POST':
         cred.delete()
@@ -151,7 +182,21 @@ def profile_settings(request):
         request.user.email = request.POST.get('email')
         request.user.save()
         messages.success(request, "Profile updated.")
-    return render(request, 'vault/account/profile_settings.html')
+    return render(request, 'account/profile_settings.html')
+
+from django.contrib.auth.decorators import login_required
+from .models import LoginRecord, SecurityLog
+
+@login_required
+def user_profile(request):
+    login_logs = LoginRecord.objects.filter(user=request.user).order_by('-timestamp')[:10]
+    security_logs = SecurityLog.objects.filter(user=request.user).order_by('-timestamp')[:10]
+    
+    return render(request, 'account/profile.html', {
+        'login_logs': login_logs,
+        'security_logs': security_logs,
+    })
+
 
 @login_required
 def change_password(request):
@@ -164,4 +209,4 @@ def change_password(request):
             return redirect('profile_settings')
     else:
         form = PasswordChangeForm(request.user)
-    return render(request, 'vault/account/change_password.html', {'form': form})
+    return render(request, 'account/change_password.html', {'form': form})
