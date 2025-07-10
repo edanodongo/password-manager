@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cybersecurity 3D</title>
+    <style>
+        body { margin: 0; background: #0d1b2a; color: #fff; font-family: Arial, sans-serif; }
+        #cyber3d { width: 100vw; height: 70vh; display: block; }
+        .header { text-align: center; margin: 20px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Cybersecurity 3D Experience</h1>
+        <p>Visualize digital defense in a 3D world!</p>
+    </div>
+    <canvas id="cyber3d"></canvas>
+    <script>
+        // Basic Three.js setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0d1b2a);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight*0.7, 0.1, 1000);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('cyber3d')});
+        renderer.setSize(window.innerWidth, window.innerHeight * 0.7);
+
+        // 3D Cybersecurity Elements
+        // A shield (symbolizing protection)
+        const shieldGeometry = new THREE.CylinderGeometry(1, 1, 0.2, 32);
+        const shieldMaterial = new THREE.MeshPhongMaterial({color: 0x00b4d8, shininess: 100});
+        const shield = new THREE.Mesh(shieldGeometry, shieldMaterial);
+        shield.rotation.x = Math.PI / 2;
+        scene.add(shield);
+
+        // Binary code particles (symbolizing data)
+        for (let i = 0; i < 30; i++) {
+            const geometry = new THREE.SphereGeometry(0.05, 8, 8);
+            const material = new THREE.MeshBasicMaterial({color: 0x90e0ef});
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.set(
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 2,
+                (Math.random() - 0.5) * 4
+            );
+            scene.add(sphere);
+        }
+
+        // Lighting
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(0, 2, 5);
+        scene.add(light);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            shield.rotation.z += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / (window.innerHeight*0.7);
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight*0.7);
+        });
+    </script>
+</body>
+</html>

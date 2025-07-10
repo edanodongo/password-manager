@@ -10,7 +10,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('validate/', views.validate_field, name='validate_field'),  # New AJAX URL
     
-    path('', views.dashboard, name='dashboard'),
+    path('dashboard/', views.dashboard, name='dashboard'),
 
     # Password reset request form
     path('password_reset/', auth_views.PasswordResetView.as_view(
