@@ -38,7 +38,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'vault',  # Custom app for managing passwords
+    'vault', 
+    'crispy_forms',
+    'django_otp',
+    'two_factor',
+    'django_otp.plugins.otp_totp',  # TOTP (e.g., Google Authenticator)
+    'django_otp.plugins.otp_static',  # for backup tokens
 ]
 
 MIDDLEWARE = [
@@ -46,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django_otp.middleware.OTPMiddleware',  # <- ADD THIS
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -132,13 +138,37 @@ USE_I18N = True
 
 USE_TZ = True
 
+from decouple import config
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+ENCRYPTION_KEY = config('ENCRYPTION_KEY')
+# Login and logout URLs
+# These URLs are used for the login and logout views in the application.
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
 
+
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Static files URL prefix
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# Tell Django to look for static files both inside the app and in the global static folder
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),  # Global static folder outside the app
+]
+
+# Only used in production (when running `collectstatic`)
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # This should NOT be the same as STATICFILES_DIRS
+
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

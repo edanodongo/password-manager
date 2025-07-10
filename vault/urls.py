@@ -2,6 +2,7 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from django.urls import reverse_lazy
 
 urlpatterns = [
     path('', views.register_view, name='register'),
@@ -9,22 +10,40 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('validate/', views.validate_field, name='validate_field'),  # New AJAX URL
     
-    # This code adds password reset functionality to the existing URL patterns.
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('add/', views.add_credential, name='add_credential'),
+    path('edit/<int:pk>/', views.edit_credential, name='edit_credential'),
+    path('delete/<int:pk>/', views.delete_credential, name='delete_credential'),
+    
+    path('account/profile/', views.profile_settings, name='profile_settings'),
+    path('account/change-password/', views.change_password, name='change_password'),
+
+    #path('profile/', views.user_profile, name='user_profile'),
+    path('profile/', views.profile_view, name='profile'),
+
+    # Password reset request form
     path('password_reset/', auth_views.PasswordResetView.as_view(
-        template_name='vault/password_reset.html'
+        template_name='pass_reset/password_reset.html',
+        # email_template_name='pass_reset/password_reset_email.html',
+        # subject_template_name='pass_reset/password_reset_subject.txt',
+        success_url=reverse_lazy('password_reset_done')
     ), name='password_reset'),
 
+    # Password reset done (email sent confirmation)
     path('password_reset_done/', auth_views.PasswordResetDoneView.as_view(
-        template_name='vault/password_reset_done.html'
+        template_name='pass_reset/password_reset_done.html'
     ), name='password_reset_done'),
 
+    # Password reset confirm (link from email)
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
-        template_name='vault/password_reset_confirm.html'
+        template_name='pass_reset/password_reset_confirm.html',
+        success_url=reverse_lazy('password_reset_complete')
     ), name='password_reset_confirm'),
 
+    # Password reset complete (password successfully changed)
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
-        template_name='vault/password_reset_complete.html'
+        template_name='pass_reset/password_reset_complete.html'
     ), name='password_reset_complete'),
+
 ]
 # Note: Ensure that the views are defined in vault/views.py as per the previous code snippets.
-

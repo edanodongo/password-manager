@@ -1,0 +1,29 @@
+{% extends 'vault/base.html' %}
+{% load form_tags %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 500px;">
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <h4 class="text-center mb-4 text-primary">🔐 Two-Factor Authentication</h4>
+      <form method="post">
+        {% csrf_token %}
+        {% if wizard.form.non_field_errors %}
+          <div class="alert alert-danger">
+            {{ wizard.form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label for="{{ wizard.form.token.id_for_label }}" class="form-label">Authentication Code</label>
+          {{ wizard.form.token|add_class:"form-control" }}
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary">Verify</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
