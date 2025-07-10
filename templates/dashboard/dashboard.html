@@ -1,4 +1,32 @@
-<!DOCTYPE html>
+{% extends 'vault/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>Your Credentials</h4>
+  <a href="{% url 'add_credential' %}" class="btn btn-sm btn-primary">+ Add</a>
+</div>
+
+<form method="get" class="mb-3">
+  <input type="text" name="q" placeholder="Search..." class="form-control" value="{{ search_query }}">
+</form>
+
+{% for cred in credentials %}
+  <div class="card mb-2">
+    <div class="card-body">
+      <h5>{{ cred.name }} <small class="text-muted">({{ cred.platform_type }})</small></h5>
+      <p><strong>Username:</strong> {{ cred.username }}<br>
+      <strong>Password:</strong> {{ cred.get_password }}<br>
+      <strong>URL/Developer:</strong> {{ cred.url_or_developer }}</p>
+      <a href="{% url 'edit_credential' cred.pk %}" class="btn btn-sm btn-warning">Edit</a>
+      <a href="{% url 'delete_credential' cred.pk %}" class="btn btn-sm btn-danger">Delete</a>
+    </div>
+  </div>
+{% empty %}
+  <p>No credentials found.</p>
+{% endfor %}
+{% endblock %}
+
+
+{% comment %} <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -68,4 +96,4 @@
         });
     </script>
 </body>
-</html>
+</html> {% endcomment %}

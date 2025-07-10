@@ -135,6 +135,11 @@ USE_TZ = True
 from decouple import config
 
 ENCRYPTION_KEY = config('ENCRYPTION_KEY')
+# Login and logout URLs
+# These URLs are used for the login and logout views in the application.
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
 
 
 import os
