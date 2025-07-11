@@ -9,6 +9,18 @@ from .models import Credential, SecurityLog
 
 
 def register_view(request):
+    """
+    Handles user registration.
+    If the user is already logged in, redirects to the dashboard.
+    If the user has no 2FA device, redirects to the 2FA setup page.
+    """
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    # After user is created and logged in:
+    if not user_has_device(user):
+        return redirect('two_factor:setup')
+
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
@@ -20,6 +32,10 @@ def register_view(request):
     return render(request, 'vault/register.html', {'form': form})
 
 def login_view(request):
+    
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
