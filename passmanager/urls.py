@@ -24,6 +24,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(tf_urls)),  # this includes login, setup, and verification
     path('', include('vault.urls')),
+    
+    # Then include the 2FA URLs under a distinct path
+    path('two_factor/', include(tf_urls)),  # use a prefix like 'account/' to namespace them
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

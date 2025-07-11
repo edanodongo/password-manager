@@ -7,19 +7,32 @@ from vault.decorators import otp_optional
 from django_otp import user_has_device
 from .models import Credential, SecurityLog
 
-
 def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+            login(request, user)
+
+            # ✅ Only after login, user is valid and authenticated
+            if not user_has_device(user):
+                return redirect('two_factor:setup')
+
             messages.success(request, "Registration successful.")
-            return redirect('login')
+            return redirect('dashboard')  # or 'profile' depending on flow
     else:
         form = RegisterForm()
+
     return render(request, 'vault/register.html', {'form': form})
 
 def login_view(request):
+    
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
