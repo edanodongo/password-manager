@@ -184,6 +184,8 @@ def profile_settings(request):
         messages.success(request, "Profile updated.")
     return render(request, 'account/profile_settings.html')
 
+
+
 from django.contrib.auth.decorators import login_required
 from .models import LoginRecord, SecurityLog
 from django.contrib.auth.decorators import login_required
