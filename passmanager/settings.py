@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',  # TOTP (e.g., Google Authenticator)
     'django_otp.plugins.otp_static',  # for backup tokens
 ]
+AUTH_USER_MODEL = 'vault.CustomUser'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

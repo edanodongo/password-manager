@@ -19,14 +19,13 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from two_factor.urls import urlpatterns as tf_urls
+from vault.views import CustomSetupCompleteView  # Adjust the import path if needed
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(tf_urls)),  # this includes login, setup, and verification
     path('', include('vault.urls')),
     
-    # Then include the 2FA URLs under a distinct path
-    path('two_factor/', include(tf_urls)),  # use a prefix like 'account/' to namespace them
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -7,6 +7,9 @@ from vault.decorators import otp_optional
 from django_otp import user_has_device
 from .models import Credential, SecurityLog
 
+from django.contrib.auth import login
+from django_otp import user_has_device
+
 def register_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -16,13 +19,12 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-
-            # ✅ Only after login, user is valid and authenticated
+            
+            # Force TOTP setup next
             if not user_has_device(user):
                 return redirect('two_factor:setup')
-
-            messages.success(request, "Registration successful.")
-            return redirect('dashboard')  # or 'profile' depending on flow
+            
+            return redirect('dashboard')
     else:
         form = RegisterForm()
 
@@ -61,7 +63,9 @@ def logout_view(request):
 
 
 from django.http import JsonResponse
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
@@ -197,6 +201,18 @@ def profile_settings(request):
         messages.success(request, "Profile updated.")
     return render(request, 'account/profile_settings.html')
 
+@login_required
+def toggle_2fa(request):
+    if request.method == 'POST':
+        devices = TOTPDevice.objects.filter(user=request.user)
+        if devices.exists():
+            devices.delete()
+            messages.success(request, "Two-Factor authentication has been disabled.")
+        else:
+            return redirect('two_factor:setup')
+    return redirect('profile')
+
+
 
 
 from django.contrib.auth.decorators import login_required
@@ -266,3 +282,12 @@ def profile_view(request):
         'mfa_enabled': mfa_enabled,
         'security_logs': security_logs
     })
+
+
+from two_factor.views.core import SetupCompleteView
+from django.shortcuts import redirect
+
+class CustomSetupCompleteView(SetupCompleteView):
+    def dispatch(self, request, *args, **kwargs):
+        messages.success(request, "Two-Factor Authentication enabled successfully.")
+        return redirect('dashboard')
