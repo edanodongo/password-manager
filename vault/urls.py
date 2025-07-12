@@ -14,8 +14,10 @@ urlpatterns = [
     path('add/', views.add_credential, name='add_credential'),
     path('edit/<int:pk>/', views.edit_credential, name='edit_credential'),
     path('delete/<int:pk>/', views.delete_credential, name='delete_credential'),
-        
+    
+    path('logout-inactive/', views.logout_due_to_inactivity, name='logout_inactive'),
 
+    
     #path('profile/', views.user_profile, name='user_profile'),
     path('profile/', views.profile_view, name='profile'),
 
