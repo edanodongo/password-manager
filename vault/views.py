@@ -134,9 +134,6 @@ def add_credential(request):
 
 @login_required
 def edit_credential(request, pk):
-    # Show message to users without 2FA
-    # if not request.user.is_verified and not user_has_device(request.user):
-    #     messages.info(request, "🔒 For enhanced security, consider enabling 2FA in your account settings.")
 
     credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
     
@@ -159,9 +156,6 @@ def edit_credential(request, pk):
 
 @login_required
 def delete_credential(request, pk):
-    # Show message to users without 2FA
-    # if not request.user.is_verified and not user_has_device(request.user):
-    #     messages.info(request, "🔒 For enhanced security, consider enabling 2FA in your account settings.")
 
     credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
 
