@@ -1,4 +1,3 @@
-
 {% load static %}
 
 <!DOCTYPE html>
@@ -37,8 +36,6 @@
      
 </head>
 <body class="bg-light">
-
-
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container ">
       {% if user.is_authenticated %}
@@ -65,13 +62,13 @@
       {% endfor %}
     {% endif %}
     
-    <div id="sessionWarningModal" class="modal fade" tabindex="-1" role="dialog" style="display:none;">
-      <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-body text-center">
-            <p>Your session will expire in <strong>60 seconds</strong> due to inactivity.</p>
-            <button onclick="keepAlive()" class="btn btn-primary btn-sm">Stay Logged In</button>
-          </div>
+    <!-- Session Timeout Warning Modal -->
+    <div class="modal fade" id="sessionWarningModal" tabindex="-1" role="dialog" aria-labelledby="sessionWarningModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content text-center p-3">
+          <h5 class="modal-title">Are you still there?</h5>
+          <p>Your session will expire soon due to inactivity.</p>
+          <button class="btn btn-primary" onclick="keepAlive()">Keep me logged in</button>
         </div>
       </div>
     </div>
@@ -86,9 +83,14 @@
   <!-- Bootstrap JS (optional for interactions) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+  <!-- Load Bootstrap 5 (include before your script) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
   <!-- Bootstrap Icons CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
+  <script src="{% static 'js/custom/password_toggle.js' %}"></script>
 
   <!-- AJAX Search & Toggle Script -->
   <script>
@@ -164,7 +166,6 @@
 
     resetTimers();
   </script>
-  <script src="{% static 'js/custom/password_toggle.js' %}"></script>
 
 
 </body>
