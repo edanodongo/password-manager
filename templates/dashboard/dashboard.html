@@ -65,13 +65,23 @@
       {% endfor %}
     {% endif %}
 
+  <!-- Session Timeout Warning Modal -->
+  <div class="modal fade" id="sessionWarningModal" tabindex="-1" role="dialog" aria-labelledby="sessionWarningModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content text-center p-3">
+        <h5 class="modal-title">Are you still there?</h5>
+        <p>Your session will expire soon due to inactivity.</p>
+        <button class="btn btn-primary" onclick="keepAlive()">Keep me logged in</button>
+      </div>
+    </div>
+  </div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold text-primary">Your Credentials</h4>
         <div class="d-flex gap-2">
-            <a href="{% url 'profile' %}" class="btn btn-outline-secondary btn-sm">
+            {% comment %} <a href="{% url 'profile' %}" class="btn btn-outline-secondary btn-sm">
               <i class="bi bi-person-circle me-1"></i> Profile
-            </a>
+            </a> {% endcomment %}
 
             <a href="{% url 'add_credential' %}" class="btn btn-sm btn-success shadow-sm px-4 py-2">
                 <i class="bi bi-plus-circle"></i> Add
@@ -134,7 +144,49 @@
         }
       }
     });
+
+    const sessionTimeout = 60 * 1000;     // 1 minute
+    const warningDuration = 10 * 1000;    // 10 sec before logout (adjust for production)
+    let warningShown = false;
+    let warningTimer, logoutTimer;
+
+    function showSessionWarning() {
+      warningShown = true;
+      const modal = new bootstrap.Modal(document.getElementById('sessionWarningModal'));
+      modal.show();
+
+      logoutTimer = setTimeout(() => {
+        window.location.href = "{% url 'logout_inactive' %}";
+      }, warningDuration);
+    }
+
+    function resetTimers() {
+      clearTimeout(warningTimer);
+      clearTimeout(logoutTimer);
+      warningShown = false;
+
+      warningTimer = setTimeout(() => {
+        showSessionWarning();
+      }, sessionTimeout - warningDuration);
+    }
+
+    function keepAlive() {
+      fetch(location.href);
+      const modalEl = document.getElementById('sessionWarningModal');
+      if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+      }
+      resetTimers();
+    }
+
+    document.addEventListener('mousemove', resetTimers);
+    document.addEventListener('keydown', resetTimers);
+    document.addEventListener('click', resetTimers);
+
+    resetTimers();
   </script>
+
   <script src="{% static 'js/custom/password_toggle.js' %}"></script>
 
 

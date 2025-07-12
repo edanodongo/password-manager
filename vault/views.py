@@ -24,28 +24,27 @@ def register_view(request):
     return render(request, 'vault/register.html', {'form': form})
 
 def login_view(request):
-    
     if request.user.is_authenticated:
         return redirect('dashboard')
-    
+
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
-        remember = request.POST.get('remember_me')  # May be None
+        remember = request.POST.get('remember_me')  # checkbox in login form
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
 
-            # Session will expire on browser close unless 'remember_me' is checked
             if remember:
-                request.session.set_expiry(1209600)  # 2 weeks in seconds
+                request.session.set_expiry(1209600)  # 2 weeks
             else:
-                request.session.set_expiry(0)  # Expire on browser close
+                request.session.set_expiry(900)  # 15 minutes for example
 
             return redirect('dashboard')
         else:
             messages.error(request, "Invalid credentials")
+
     return render(request, 'vault/login.html')
 
 
@@ -247,3 +246,13 @@ def profile_view(request):
         'security_logs': security_logs
     })
 
+
+
+from django.contrib.auth import logout
+from django.contrib import messages
+from django.shortcuts import redirect
+
+def logout_due_to_inactivity(request):
+    logout(request)
+    messages.warning(request, "You've been logged out due to inactivity.")
+    return redirect('login')

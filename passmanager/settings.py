@@ -89,6 +89,16 @@ DATABASES = {
     }
 }
 
+# Auto-logout after 1 minute (for testing)
+SESSION_COOKIE_AGE = 60  # in seconds (60 = 1 minute)
+
+# Optional: logout when browser closes
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Save session on every request to reset the expiry time
+SESSION_SAVE_EVERY_REQUEST = True
+
+
 # For testing password reset emails in the console
 
 EMAIL_BACKEND = config('EMAIL_BACKEND')
