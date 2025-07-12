@@ -41,8 +41,6 @@ INSTALLED_APPS = [
     'vault', 
     'crispy_forms',
 ]
-AUTH_USER_MODEL = 'vault.CustomUser'
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
