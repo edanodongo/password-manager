@@ -3,12 +3,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from .forms import RegisterForm
 from django.contrib import messages
-from vault.decorators import otp_optional
-from django_otp import user_has_device
 from .models import Credential, SecurityLog
 
 from django.contrib.auth import login
-from django_otp import user_has_device
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -19,10 +16,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            
-            # Force TOTP setup next
-            if not user_has_device(user):
-                return redirect('two_factor:setup')
+            messages.success(request, "Registration successful. You are now logged in.")
             
             return redirect('dashboard')
     else:
@@ -106,11 +100,7 @@ from django.template.loader import render_to_string
 
 @login_required
 def dashboard(request):
-    
-    # 2FA Setup Prompt
-    # if not request.user.is_verified and not user_has_device(request.user):
-    #     messages.warning(request, "For better security, enable 2FA in your account settings.")
-    
+        
     search_query = request.GET.get('q', '')
     credentials = Credential.objects.filter(user=request.user)
 
@@ -141,7 +131,7 @@ def add_credential(request):
         form = CredentialForm()
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Add Credential'})
 
-# @otp_optional
+
 @login_required
 def edit_credential(request, pk):
     # Show message to users without 2FA
@@ -167,7 +157,6 @@ def edit_credential(request, pk):
         form = CredentialForm(instance=cred)
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
 
-# @otp_optional
 @login_required
 def delete_credential(request, pk):
     # Show message to users without 2FA
@@ -201,38 +190,23 @@ def profile_settings(request):
         messages.success(request, "Profile updated.")
     return render(request, 'account/profile_settings.html')
 
-@login_required
-def toggle_2fa(request):
-    if request.method == 'POST':
-        devices = TOTPDevice.objects.filter(user=request.user)
-        if devices.exists():
-            devices.delete()
-            messages.success(request, "Two-Factor authentication has been disabled.")
-        else:
-            return redirect('two_factor:setup')
-    return redirect('profile')
-
 
 
 
 from django.contrib.auth.decorators import login_required
 from .models import LoginRecord, SecurityLog
 from django.contrib.auth.decorators import login_required
-from django_otp.plugins.otp_static.models import StaticDevice
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from .models import LoginRecord, SecurityLog
 
 @login_required
 def user_profile(request):
     user = request.user
-    mfa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     
     login_logs = LoginRecord.objects.filter(user=user).order_by('-timestamp')[:5]
     security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:5]
 
     return render(request, 'account/profile.html', {
         'user': user,
-        'mfa_enabled': mfa_enabled,
         'login_logs': login_logs,
         'security_logs': security_logs,
     })
@@ -259,12 +233,10 @@ from .forms import ProfileUpdateForm
 from .models import SecurityLog
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 @login_required
 def profile_view(request):
     user = request.user
-    mfa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:10]
 
     if request.method == 'POST':
@@ -279,15 +251,6 @@ def profile_view(request):
 
     return render(request, 'account/profile.html', {
         'form': form,
-        'mfa_enabled': mfa_enabled,
         'security_logs': security_logs
     })
 
-
-from two_factor.views.core import SetupCompleteView
-from django.shortcuts import redirect
-
-class CustomSetupCompleteView(SetupCompleteView):
-    def dispatch(self, request, *args, **kwargs):
-        messages.success(request, "Two-Factor Authentication enabled successfully.")
-        return redirect('dashboard')
