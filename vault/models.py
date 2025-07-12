@@ -1,6 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 from .utils.crypto import encrypt, decrypt
+from django.contrib.auth.models import AbstractUser
+
+class CustomUser(AbstractUser):
+    # Add extra fields here if needed
+    pass
+
 
 class Credential(models.Model):
     PLATFORM_CHOICES = [
