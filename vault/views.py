@@ -3,26 +3,21 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from .forms import RegisterForm
 from django.contrib import messages
-from vault.decorators import otp_optional
-from django_otp import user_has_device
 from .models import Credential, SecurityLog
+
+from django.contrib.auth import login
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect('login')
 
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
+            form.save()
+            messages.success(request, "Registration successful. Please log in.")
+            return redirect('login')
 
-            # ✅ Only after login, user is valid and authenticated
-            if not user_has_device(user):
-                return redirect('two_factor:setup')
-
-            messages.success(request, "Registration successful.")
-            return redirect('dashboard')  # or 'profile' depending on flow
     else:
         form = RegisterForm()
 
@@ -61,7 +56,9 @@ def logout_view(request):
 
 
 from django.http import JsonResponse
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
@@ -102,11 +99,7 @@ from django.template.loader import render_to_string
 
 @login_required
 def dashboard(request):
-    
-    # 2FA Setup Prompt
-    # if not request.user.is_verified and not user_has_device(request.user):
-    #     messages.warning(request, "For better security, enable 2FA in your account settings.")
-    
+        
     search_query = request.GET.get('q', '')
     credentials = Credential.objects.filter(user=request.user)
 
@@ -137,12 +130,9 @@ def add_credential(request):
         form = CredentialForm()
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Add Credential'})
 
-# @otp_optional
+
 @login_required
 def edit_credential(request, pk):
-    # Show message to users without 2FA
-    # if not request.user.is_verified and not user_has_device(request.user):
-    #     messages.info(request, "🔒 For enhanced security, consider enabling 2FA in your account settings.")
 
     credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
     
@@ -163,12 +153,8 @@ def edit_credential(request, pk):
         form = CredentialForm(instance=cred)
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
 
-# @otp_optional
 @login_required
 def delete_credential(request, pk):
-    # Show message to users without 2FA
-    # if not request.user.is_verified and not user_has_device(request.user):
-    #     messages.info(request, "🔒 For enhanced security, consider enabling 2FA in your account settings.")
 
     credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
 
@@ -199,24 +185,21 @@ def profile_settings(request):
 
 
 
+
 from django.contrib.auth.decorators import login_required
 from .models import LoginRecord, SecurityLog
 from django.contrib.auth.decorators import login_required
-from django_otp.plugins.otp_static.models import StaticDevice
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from .models import LoginRecord, SecurityLog
 
 @login_required
 def user_profile(request):
     user = request.user
-    mfa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     
     login_logs = LoginRecord.objects.filter(user=user).order_by('-timestamp')[:5]
     security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:5]
 
     return render(request, 'account/profile.html', {
         'user': user,
-        'mfa_enabled': mfa_enabled,
         'login_logs': login_logs,
         'security_logs': security_logs,
     })
@@ -243,12 +226,10 @@ from .forms import ProfileUpdateForm
 from .models import SecurityLog
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 @login_required
 def profile_view(request):
     user = request.user
-    mfa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:10]
 
     if request.method == 'POST':
@@ -263,6 +244,6 @@ def profile_view(request):
 
     return render(request, 'account/profile.html', {
         'form': form,
-        'mfa_enabled': mfa_enabled,
         'security_logs': security_logs
     })
+

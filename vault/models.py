@@ -1,6 +1,11 @@
 from django.db import models
-from django.contrib.auth.models import User
 from .utils.crypto import encrypt, decrypt
+from django.contrib.auth.models import AbstractUser
+
+class CustomUser(AbstractUser):
+    # Add extra fields here if needed
+    pass
+
 
 class Credential(models.Model):
     PLATFORM_CHOICES = [
@@ -9,7 +14,7 @@ class Credential(models.Model):
         ('app', 'Desktop App'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     platform_type = models.CharField(max_length=10, choices=PLATFORM_CHOICES)
     name = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
@@ -39,7 +44,7 @@ class CyberTip(models.Model):
     
 # a model for session history
 class LoginRecord(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -49,8 +54,7 @@ class LoginRecord(models.Model):
 
 
 class SecurityLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     action = models.CharField(max_length=100)
     description = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
-

@@ -1,20 +1,17 @@
 # vault/forms.py
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
+from .models import CustomUser, Credential
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True)
 
     class Meta:
-        model = User
+        model = CustomUser
         fields = ['username', 'email', 'password1', 'password2']
 
 
-
-
 from django import forms
-from .models import Credential
 
 class CredentialForm(forms.ModelForm):
     password_raw = forms.CharField(
@@ -37,14 +34,13 @@ class CredentialForm(forms.ModelForm):
 
 
 from django import forms
-from django.contrib.auth.models import User
 
 class ProfileUpdateForm(forms.ModelForm):
     email = forms.EmailField(required=True, label='New Email')
     password = forms.CharField(required=False, label='New Password', widget=forms.PasswordInput)
 
     class Meta:
-        model = User
+        model = CustomUser
         fields = ['email', 'password']
 
     def save(self, commit=True):
