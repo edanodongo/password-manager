@@ -22,10 +22,10 @@
             <strong>Two-Factor Auth:</strong>
             {% if mfa_enabled %}
               <span class="badge bg-success">Enabled</span>
-              <a href="{% url 'two_factor:disable' %}" class="btn btn-sm btn-outline-danger ms-2">Disable</a>
+              <a href="" class="btn btn-sm btn-outline-danger ms-2">Disable</a>
             {% else %}
               <span class="badge bg-danger">Disabled</span>
-              <a href="{% url 'two_factor:setup' %}" class="btn btn-sm btn-outline-primary ms-2">Set Up Now</a>
+              <a href="" class="btn btn-sm btn-outline-primary ms-2">Set Up Now</a>
             {% endif %}
           </p>
         </div>

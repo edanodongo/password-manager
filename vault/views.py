@@ -9,16 +9,15 @@ from django.contrib.auth import login
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect('login')
 
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, "Registration successful. You are now logged in.")
-            
-            return redirect('dashboard')
+            form.save()
+            messages.success(request, "Registration successful. Please log in.")
+            return redirect('login')
+
     else:
         form = RegisterForm()
 
