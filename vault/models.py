@@ -1,10 +1,16 @@
 from django.db import models
 from .utils.crypto import encrypt, decrypt
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
+
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 class CustomUser(AbstractUser):
-    # Add extra fields here if needed
-    pass
+    # Add a flag to check if 2FA is enabled
+    is_2fa_enabled = models.BooleanField(default=False)
+
+    def has_2fa_device(self):
+        return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
 
 
 class Credential(models.Model):
@@ -14,7 +20,7 @@ class Credential(models.Model):
         ('app', 'Desktop App'),
     ]
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     platform_type = models.CharField(max_length=10, choices=PLATFORM_CHOICES)
     name = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
@@ -44,7 +50,7 @@ class CyberTip(models.Model):
     
 # a model for session history
 class LoginRecord(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -54,7 +60,9 @@ class LoginRecord(models.Model):
 
 
 class SecurityLog(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     action = models.CharField(max_length=100)
     description = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+
+

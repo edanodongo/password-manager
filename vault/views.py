@@ -9,19 +9,38 @@ from django.contrib.auth import login
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('login')
+        return redirect('dashboard')
 
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Registration successful. Please log in.")
-            return redirect('login')
+            user = form.save()
+            login(request, user)
 
+            # Redirect to 2FA setup page immediately
+            # return redirect('two_factor:setup')  # correct name from two_factor.urls
+            return redirect('setup_2fa')  # redirect to TOTP setup
     else:
         form = RegisterForm()
 
     return render(request, 'vault/register.html', {'form': form})
+
+
+# def register_view(request):
+#     if request.user.is_authenticated:
+#         return redirect('login')
+
+#     if request.method == 'POST':
+#         form = RegisterForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, "Registration successful. Please log in.")
+#             return redirect('login')
+
+#     else:
+#         form = RegisterForm()
+
+#     return render(request, 'vault/register.html', {'form': form})
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -225,6 +244,7 @@ from .forms import ProfileUpdateForm
 from .models import SecurityLog
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
+from django_otp.decorators import otp_required
 
 @login_required
 def profile_view(request):
@@ -256,3 +276,82 @@ def logout_due_to_inactivity(request):
     logout(request)
     messages.warning(request, "You've been logged out due to inactivity.")
     return redirect('login')
+
+
+from django_otp.plugins.otp_totp.models import TOTPDevice
+
+@login_required
+def toggle_2fa(request):
+    if request.method == 'POST':
+        if request.user.has_2fa_device():
+            # Turn off 2FA: Delete the device
+            TOTPDevice.objects.filter(user=request.user).delete()
+            request.user.is_2fa_enabled = False
+        else:
+            # Turn on 2FA: Redirect to setup
+            return redirect('two_factor:setup')
+
+        request.user.save()
+        messages.success(request, "2FA settings updated.")
+    return redirect('profile')
+
+
+# vault/views.py
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django_otp.util import random_hex
+import qrcode.image.svg
+from io import BytesIO
+import pyotp
+
+@login_required
+def setup_2fa(request):
+    user = request.user
+
+    # Create a TOTP device if not exists
+    device, created = TOTPDevice.objects.get_or_create(user=user, confirmed=False)
+
+    # Generate key if new
+    if created or not device.key:
+        device.key = random_hex()
+        device.save()
+
+    # Generate the URI and QR code
+    key = device.key
+    otp_uri = pyotp.totp.TOTP(key).provisioning_uri(
+        name=user.email or user.username,
+        issuer_name="Password Manager"
+    )
+
+    # Generate QR code as inline SVG
+    img = qrcode.make(otp_uri, image_factory=qrcode.image.svg.SvgImage)
+    buffer = BytesIO()
+    img.save(buffer)
+    qr_svg = buffer.getvalue().decode()
+
+    # On POST, verify OTP
+    if request.method == 'POST':
+        token = request.POST.get('token')
+        totp = pyotp.TOTP(key)
+        if totp.verify(token):
+            device.confirmed = True
+            device.save()
+            return redirect('profile')  # or dashboard
+        else:
+            return render(request, 'account/setup_2fa.html', {
+                'qr_svg': qr_svg,
+                'error': 'Invalid OTP. Try again.'
+            })
+
+    return render(request, 'account/setup_2fa.html', {'qr_svg': qr_svg})
+
+
+@login_required
+def disable_2fa(request):
+    user = request.user
+    TOTPDevice.objects.filter(user=user).delete()
+    user.is_2fa_enabled = False
+    user.save()
+    messages.success(request, "Two-factor authentication has been disabled.")
+    return redirect('profile')

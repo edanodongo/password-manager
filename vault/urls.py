@@ -5,8 +5,8 @@ from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 
 urlpatterns = [
-    path('', views.register_view, name='register'),
-    path('login/', views.login_view, name='login'),
+    path('register', views.register_view, name='register'),
+    path('', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('validate/', views.validate_field, name='validate_field'),  # New AJAX URL
     
@@ -16,6 +16,11 @@ urlpatterns = [
     path('delete/<int:pk>/', views.delete_credential, name='delete_credential'),
     
     path('logout-inactive/', views.logout_due_to_inactivity, name='logout_inactive'),
+
+    path('account/toggle-2fa/', views.toggle_2fa, name='toggle_2fa'),
+    
+    path('2fa/setup/', views.setup_2fa, name='setup_2fa'),
+    path('2fa/disable/', views.disable_2fa, name='disable_2fa'),
 
     
     #path('profile/', views.user_profile, name='user_profile'),
