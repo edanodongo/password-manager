@@ -19,14 +19,19 @@
           <p><strong>Email:</strong> {{ user.email }}</p>
           <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
           <p>
-            <strong>Two-Factor Auth:</strong>
-            {% if mfa_enabled %}
+            
+            <h5>Two-Factor Authentication</h5>
+            {% if user.is_2fa_enabled %}
               <span class="badge bg-success">Enabled</span>
-              <a href="" class="btn btn-sm btn-outline-danger ms-2">Disable</a>
+              <form method="post" action="{% url 'disable_2fa' %}">
+                {% csrf_token %}
+                <button class="btn btn-danger">Disable 2FA</button>
+              </form>
             {% else %}
               <span class="badge bg-danger">Disabled</span>
-              <a href="" class="btn btn-sm btn-outline-primary ms-2">Set Up Now</a>
+              <a href="{% url 'setup_2fa' %}" class="btn btn-primary">Enable 2FA</a>
             {% endif %}
+
           </p>
         </div>
       </div>

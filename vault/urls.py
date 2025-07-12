@@ -17,6 +17,11 @@ urlpatterns = [
     
     path('logout-inactive/', views.logout_due_to_inactivity, name='logout_inactive'),
 
+    path('account/toggle-2fa/', views.toggle_2fa, name='toggle_2fa'),
+    
+    path('2fa/setup/', views.setup_2fa, name='setup_2fa'),
+    path('2fa/disable/', views.disable_2fa, name='disable_2fa'),
+
     
     #path('profile/', views.user_profile, name='user_profile'),
     path('profile/', views.profile_view, name='profile'),
