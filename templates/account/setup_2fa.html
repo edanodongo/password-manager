@@ -1,32 +1,22 @@
 {% extends 'vault/base.html' %}
 {% block content %}
-  <div class="container">
-    <h2>Set Up Two-Factor Authentication</h2>
-    <p>Scan this QR code in your Authenticator app and enter the 6-digit code:</p>
+<div class="container mt-5">
+  <h2>Set Up Two-Factor Authentication</h2>
+  <p>Scan the QR code below using your Authenticator app, then enter the code it gives you.</p>
 
-    {% if qr_svg %}
-      <div class="border p-3 mb-3" style="width: max-content;">
-        {{ qr_svg|safe }}
-      </div>
-    {% else %}
-      <p class="text-danger">QR code could not be generated.</p>
-    {% endif %}
-
-    {% if error %}
-      <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
-
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-2">
-        <label for="otp">Enter OTP:</label>
-        <input type="text" name="token" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-success">Verify</button>
-    </form>
+  <div class="qr-code mb-4">
+    {{ qr_svg|safe }}
   </div>
-    <div class="container mt-4">
-        <p>After setting up, you can manage your 2FA settings in your profile.</p>
-        <a href="{% url 'profile' %}" class="btn btn-secondary">Go to Profile</a>
-    </div>
+
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <label for="token">Enter OTP:</label>
+    <input type="text" name="token" class="form-control mb-3" required>
+    <button type="submit" class="btn btn-success">Verify</button>
+  </form>
+</div>
 {% endblock %}

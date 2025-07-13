@@ -295,56 +295,49 @@ def toggle_2fa(request):
         messages.success(request, "2FA settings updated.")
     return redirect('profile')
 
-
-# vault/views.py
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django_otp.util import random_hex
+import qrcode
 import qrcode.image.svg
 from io import BytesIO
 import pyotp
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.util import random_hex
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
 
 @login_required
 def setup_2fa(request):
     user = request.user
 
-    # Create a TOTP device if not exists
+    # Get or create an unconfirmed device
     device, created = TOTPDevice.objects.get_or_create(user=user, confirmed=False)
-
-    # Generate key if new
     if created or not device.key:
         device.key = random_hex()
         device.save()
 
-    # Generate the URI and QR code
-    key = device.key
-    otp_uri = pyotp.totp.TOTP(key).provisioning_uri(
-        name=user.email or user.username,
-        issuer_name="Password Manager"
-    )
+    # Generate TOTP URI
+    totp = pyotp.TOTP(device.key)
+    otp_uri = totp.provisioning_uri(name=user.email or user.username, issuer_name="Password Manager")
 
-    # Generate QR code as inline SVG
-    img = qrcode.make(otp_uri, image_factory=qrcode.image.svg.SvgImage)
-    buffer = BytesIO()
-    img.save(buffer)
-    qr_svg = buffer.getvalue().decode()
+    # Generate SVG QR Code
+    factory = qrcode.image.svg.SvgImage
+    stream = BytesIO()
+    img = qrcode.make(otp_uri, image_factory=factory)
+    img.save(stream)
+    svg_qr = stream.getvalue().decode()
 
-    # On POST, verify OTP
     if request.method == 'POST':
-        token = request.POST.get('token')
-        totp = pyotp.TOTP(key)
-        if totp.verify(token):
+        code = request.POST.get('token')
+        if totp.verify(code):
             device.confirmed = True
             device.save()
-            return redirect('profile')  # or dashboard
-        else:
-            return render(request, 'account/setup_2fa.html', {
-                'qr_svg': qr_svg,
-                'error': 'Invalid OTP. Try again.'
-            })
+            return redirect('profile')  # or wherever
 
-    return render(request, 'account/setup_2fa.html', {'qr_svg': qr_svg})
+        return render(request, 'account/setup_2fa.html', {
+            'qr_svg': svg_qr,
+            'error': 'Invalid OTP. Try again.'
+        })
+
+    return render(request, 'account/setup_2fa.html', {'qr_svg': svg_qr})
 
 
 @login_required
