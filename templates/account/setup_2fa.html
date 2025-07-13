@@ -1,3 +1,4 @@
+<!-- setup_2fa.html -->
 {% extends 'vault/base.html' %}
 {% block content %}
 <div class="container mt-5">
@@ -5,7 +6,7 @@
   <p>Scan the QR code below using your Authenticator app, then enter the code it gives you.</p>
 
   <div class="qr-code mb-4">
-    {{ qr_svg|safe }}
+    <img src="{{ qr_code }}" alt="QR Code for 2FA setup" />
   </div>
 
   {% if error %}
