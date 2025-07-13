@@ -1,16 +1,17 @@
-<!-- setup_2fa.html -->
 {% extends 'vault/base.html' %}
 {% block content %}
 <div class="container mt-5">
   <h2>Set Up Two-Factor Authentication</h2>
-  <p>Scan the QR code below using your Authenticator app, then enter the code it gives you.</p>
+  <p>Scan this QR code using your authenticator app and enter the 6-digit code it gives you.</p>
 
-  <div class="qr-code mb-4">
-    <img src="{{ qr_code }}" alt="QR Code for 2FA setup" />
-  </div>
+  {% if qr_code %}
+    <img src="{{ qr_code }}" alt="2FA QR Code" class="mb-3" />
+  {% endif %}
 
-  {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
   {% endif %}
 
   <form method="post">

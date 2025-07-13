@@ -295,14 +295,15 @@ def toggle_2fa(request):
         messages.success(request, "2FA settings updated.")
     return redirect('profile')
 
-import qrcode
 import pyotp
-from io import BytesIO
+import qrcode
 import base64
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.util import random_hex
+from io import BytesIO
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.contrib import messages
+import os
 
 @login_required
 def setup_2fa(request):
@@ -310,16 +311,18 @@ def setup_2fa(request):
 
     # Get or create unconfirmed device
     device, created = TOTPDevice.objects.get_or_create(user=user, confirmed=False)
+
     if created or not device.key:
-        raw_key = os.urandom(10)
-        base32_key = base64.b32encode(raw_key).decode('utf-8')
+        # Proper base32 key
+        raw_key = os.urandom(10)  # 80 bits of randomness
+        base32_key = base64.b32encode(raw_key).decode('utf-8').replace('=', '')  # remove padding
         device.key = base32_key
         device.save()
 
-    # Generate URI and QR code
     totp = pyotp.TOTP(device.key)
     otp_uri = totp.provisioning_uri(name=user.email or user.username, issuer_name="Password Manager")
 
+    # Generate base64 PNG QR
     qr = qrcode.make(otp_uri)
     buffer = BytesIO()
     qr.save(buffer, format='PNG')
@@ -331,14 +334,15 @@ def setup_2fa(request):
         if totp.verify(code):
             device.confirmed = True
             device.save()
+            messages.success(request, "2FA has been successfully enabled.")
             return redirect('profile')
 
-        return render(request, 'account/setup_2fa.html', {
-            'qr_code': qr_data_uri,
-            'error': 'Invalid OTP. Try again.'
-        })
+        messages.error(request, "Invalid OTP code. Please try again.")
 
-    return render(request, 'account/setup_2fa.html', {'qr_code': qr_data_uri})
+    return render(request, 'account/setup_2fa.html', {
+        'qr_code': qr_data_uri
+    })
+
 
 @login_required
 def disable_2fa(request):
