@@ -1,0 +1,22 @@
+{% extends 'account/base.html' %}
+{% block content %}
+  <div class="container">
+    <h2>Backup Codes</h2>
+    <p>Use these backup codes if you can't access your authenticator app.</p>
+
+    {% if new %}
+      <p class="text-danger"><strong>Save these codes now. They will not be shown again!</strong></p>
+    {% endif %}
+
+    <ul class="list-group">
+      {% for code in codes %}
+        <li class="list-group-item">{{ code }}</li>
+      {% endfor %}
+    </ul>
+
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-warning mt-3">Generate New Codes</button>
+    </form>
+  </div>
+{% endblock %}

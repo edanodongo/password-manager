@@ -4,8 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from .forms import RegisterForm
 from django.contrib import messages
 from .models import Credential, SecurityLog
-
-from django.contrib.auth import login
+from .decorators import two_factor_required
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -26,22 +25,6 @@ def register_view(request):
     return render(request, 'vault/register.html', {'form': form})
 
 
-# def register_view(request):
-#     if request.user.is_authenticated:
-#         return redirect('login')
-
-#     if request.method == 'POST':
-#         form = RegisterForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, "Registration successful. Please log in.")
-#             return redirect('login')
-
-#     else:
-#         form = RegisterForm()
-
-#     return render(request, 'vault/register.html', {'form': form})
-
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -54,6 +37,10 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            
+            # Sync is_2fa_enabled status on login
+            user.is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+            user.save()
 
             if remember:
                 request.session.set_expiry(1209600)  # 2 weeks
@@ -172,6 +159,7 @@ def edit_credential(request, pk):
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
 
 @login_required
+@two_factor_required
 def delete_credential(request, pk):
 
     credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
@@ -247,6 +235,7 @@ from django.contrib.auth import update_session_auth_hash
 from django_otp.decorators import otp_required
 
 @login_required
+@two_factor_required
 def profile_view(request):
     user = request.user
     security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:10]
@@ -295,63 +284,63 @@ def toggle_2fa(request):
         messages.success(request, "2FA settings updated.")
     return redirect('profile')
 
-
-# vault/views.py
-from django_otp.plugins.otp_totp.models import TOTPDevice
+import pyotp
+import qrcode
+import base64
+from io import BytesIO
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django_otp.util import random_hex
-import qrcode.image.svg
-from io import BytesIO
-import pyotp
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.contrib import messages
+import os
 
 @login_required
 def setup_2fa(request):
     user = request.user
 
-    # Create a TOTP device if not exists
+    # Get or create unconfirmed device
     device, created = TOTPDevice.objects.get_or_create(user=user, confirmed=False)
 
-    # Generate key if new
     if created or not device.key:
-        device.key = random_hex()
+        # Proper base32 key
+        raw_key = os.urandom(10)  # 80 bits of randomness
+        base32_key = base64.b32encode(raw_key).decode('utf-8').replace('=', '')  # remove padding
+        device.key = base32_key
         device.save()
 
-    # Generate the URI and QR code
-    key = device.key
-    otp_uri = pyotp.totp.TOTP(key).provisioning_uri(
-        name=user.email or user.username,
-        issuer_name="Password Manager"
-    )
+    totp = pyotp.TOTP(device.key)
+    otp_uri = totp.provisioning_uri(name=user.email or user.username, issuer_name="Password Manager")
 
-    # Generate QR code as inline SVG
-    img = qrcode.make(otp_uri, image_factory=qrcode.image.svg.SvgImage)
+    # Generate base64 PNG QR
+    qr = qrcode.make(otp_uri)
     buffer = BytesIO()
-    img.save(buffer)
-    qr_svg = buffer.getvalue().decode()
+    qr.save(buffer, format='PNG')
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    qr_data_uri = f"data:image/png;base64,{qr_base64}"
 
-    # On POST, verify OTP
     if request.method == 'POST':
-        token = request.POST.get('token')
-        totp = pyotp.TOTP(key)
-        if totp.verify(token):
+        code = request.POST.get('token')
+        if totp.verify(code):
             device.confirmed = True
             device.save()
-            return redirect('profile')  # or dashboard
-        else:
-            return render(request, 'account/setup_2fa.html', {
-                'qr_svg': qr_svg,
-                'error': 'Invalid OTP. Try again.'
-            })
+            user.is_2fa_enabled = True  # ✅ Set flag
+            user.save()
+            messages.success(request, "2FA has been successfully enabled.")
+            return redirect('profile')
 
-    return render(request, 'account/setup_2fa.html', {'qr_svg': qr_svg})
+
+        messages.error(request, "Invalid OTP code. Please try again.")
+
+    return render(request, 'account/setup_2fa.html', {
+        'qr_code': qr_data_uri
+    })
 
 
 @login_required
 def disable_2fa(request):
     user = request.user
     TOTPDevice.objects.filter(user=user).delete()
-    user.is_2fa_enabled = False
+    user.is_2fa_enabled = False  # ✅ Unset flag
     user.save()
     messages.success(request, "Two-factor authentication has been disabled.")
     return redirect('profile')
