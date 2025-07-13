@@ -1,24 +1,22 @@
 {% extends 'vault/base.html' %}
 {% block content %}
-<div class="container mt-5">
-  <h2>Set Up Two-Factor Authentication</h2>
-  <p>Scan this QR code using your authenticator app and enter the 6-digit code it gives you.</p>
+<div class="container mt-5 d-flex flex-column align-items-center">
+  <h2 class="text-center">Set Up Two-Factor Authentication</h2>
+  <p class="text-center">Scan this QR code using your authenticator app and enter the 6-digit code it gives you.</p>
 
   {% if qr_code %}
-    <img src="{{ qr_code }}" alt="2FA QR Code" class="mb-3" />
+    <div class="d-flex justify-content-center mb-3">
+      <img src="{{ qr_code }}" alt="2FA QR Code" style="width: 300px; height: 300px;" />
+    </div>
   {% endif %}
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-
-  <form method="post">
+  <form method="post" class="w-100" style="max-width: 400px;">
     {% csrf_token %}
-    <label for="token">Enter OTP:</label>
-    <input type="text" name="token" class="form-control mb-3" required>
-    <button type="submit" class="btn btn-success">Verify</button>
+    <label for="token" class="w-100 text-center">Enter OTP:</label>
+    <input type="text" name="token" class="form-control mb-3 text-center" required>
+    <div class="d-flex justify-content-center">
+      <button type="submit" class="btn btn-success">Verify</button>
+    </div>
   </form>
 </div>
 {% endblock %}

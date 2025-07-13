@@ -46,7 +46,7 @@
         <span class="text-white">Hi, {{ user.username }}</span>
       </div>
         <a href="{% url 'profile' %}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-person-circle me-1"></i> Profile
+          <i class="bi bi-person-circle me-1"></i> 
         </a>
         <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm ms-2">Logout</a>
       {% else %}
@@ -63,6 +63,13 @@
         <div class="alert alert-{{ message.tags }}">{{ message }}</div>
       {% endfor %}
     {% endif %}
+
+    {% if not user.is_2fa_enabled %}
+      <div class="alert alert-warning">
+        ⚠️ You must enable 2FA to access all features of your account. <a href="{% url 'setup_2fa' %}">Enable 2FA now</a>
+      </div>
+    {% endif %}
+
 
     <!-- Session Timeout Warning Modal -->
     <div class="modal fade" id="sessionWarningModal" tabindex="-1" role="dialog" aria-labelledby="sessionWarningModalLabel" aria-hidden="true">

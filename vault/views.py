@@ -4,8 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from .forms import RegisterForm
 from django.contrib import messages
 from .models import Credential, SecurityLog
-
-from django.contrib.auth import login
+from .decorators import two_factor_required
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -25,22 +24,6 @@ def register_view(request):
 
     return render(request, 'vault/register.html', {'form': form})
 
-
-# def register_view(request):
-#     if request.user.is_authenticated:
-#         return redirect('login')
-
-#     if request.method == 'POST':
-#         form = RegisterForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, "Registration successful. Please log in.")
-#             return redirect('login')
-
-#     else:
-#         form = RegisterForm()
-
-#     return render(request, 'vault/register.html', {'form': form})
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -176,6 +159,7 @@ def edit_credential(request, pk):
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
 
 @login_required
+@two_factor_required
 def delete_credential(request, pk):
 
     credential = get_object_or_404(Credential, pk=pk, user=request.user)  # Define it first
@@ -251,6 +235,7 @@ from django.contrib.auth import update_session_auth_hash
 from django_otp.decorators import otp_required
 
 @login_required
+@two_factor_required
 def profile_view(request):
     user = request.user
     security_logs = SecurityLog.objects.filter(user=user).order_by('-timestamp')[:10]
