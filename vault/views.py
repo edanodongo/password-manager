@@ -54,6 +54,10 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            
+            # Sync is_2fa_enabled status on login
+            user.is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+            user.save()
 
             if remember:
                 request.session.set_expiry(1209600)  # 2 weeks
@@ -334,8 +338,11 @@ def setup_2fa(request):
         if totp.verify(code):
             device.confirmed = True
             device.save()
+            user.is_2fa_enabled = True  # ✅ Set flag
+            user.save()
             messages.success(request, "2FA has been successfully enabled.")
             return redirect('profile')
+
 
         messages.error(request, "Invalid OTP code. Please try again.")
 
@@ -348,7 +355,7 @@ def setup_2fa(request):
 def disable_2fa(request):
     user = request.user
     TOTPDevice.objects.filter(user=user).delete()
-    user.is_2fa_enabled = False
+    user.is_2fa_enabled = False  # ✅ Unset flag
     user.save()
     messages.success(request, "Two-factor authentication has been disabled.")
     return redirect('profile')
