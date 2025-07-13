@@ -18,5 +18,5 @@ A secure and user-friendly password manager built with Django, designed to help
     <li>AES 256 encryption for password security</li>
     <li>JavaScript and AJAX for dynamic front-end interactions</li>
     <li>Bootstrap for responsive design</li>
-    <li>SQLite (default) or other databases supported by Django</li>
+    <li>PostgreSQL (default) or other databases supported by Django</li>
 </ul>
