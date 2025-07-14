@@ -418,12 +418,13 @@ def check_2fa_status(request):
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-import json
 from .models import BackupCode
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 import secrets
+import json
+import time
 
 User = get_user_model()
 
@@ -440,6 +441,15 @@ def send_backup_code_email(request):
 
             if not user.is_2fa_enabled:
                 return JsonResponse({'success': False, 'message': '2FA is not enabled for this user'})
+
+            # Rate limit: 5 minutes (300 seconds)
+            last_sent = request.session.get(f'backup_code_last_sent_{username}')
+            now = int(time.time())
+            cooldown = 300  # 5 minutes
+
+            if last_sent and now - last_sent < cooldown:
+                remaining = cooldown - (now - last_sent)
+                return JsonResponse({'success': False, 'message': f'Please wait {remaining} seconds before requesting another backup code.', 'cooldown': remaining})
 
             # Get or generate backup code
             code = BackupCode.objects.filter(user=user, used=False).first()
@@ -458,7 +468,10 @@ def send_backup_code_email(request):
                 fail_silently=False,
             )
 
-            return JsonResponse({'success': True, 'message': 'Backup code has been sent to your email.'})
+            # Store timestamp in session
+            request.session[f'backup_code_last_sent_{username}'] = now
+
+            return JsonResponse({'success': True, 'message': 'Backup code has been sent to your email.', 'cooldown': cooldown})
 
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})

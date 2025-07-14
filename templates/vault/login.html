@@ -92,16 +92,46 @@
   });
 </script>
 
-<!-- AJAX: Send backup code -->
+<!-- AJAX: Send backup code with persistent cooldown -->
 <script>
-  document.getElementById('send-backup-code').addEventListener('click', function () {
+  const backupButton = document.getElementById('send-backup-code');
+  const messageDiv = document.getElementById('backup-code-message');
+  const cooldownKey = 'backup_code_cooldown';
+  const cooldownDuration = 300; // 5 minutes
+
+  function disableBackupButton(seconds) {
+    backupButton.disabled = true;
+    let remaining = seconds;
+    backupButton.textContent = `Wait ${remaining}s`;
+
+    const interval = setInterval(() => {
+      remaining--;
+      backupButton.textContent = `Wait ${remaining}s`;
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        backupButton.disabled = false;
+        backupButton.textContent = 'Email me a Backup Code';
+        localStorage.removeItem(cooldownKey);
+      }
+    }, 1000);
+  }
+
+  function checkCooldownOnLoad() {
+    const cooldownEnd = parseInt(localStorage.getItem(cooldownKey), 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (cooldownEnd && cooldownEnd > now) {
+      disableBackupButton(cooldownEnd - now);
+    }
+  }
+
+  backupButton.addEventListener('click', function () {
     const username = document.getElementById('username').value;
-    const messageDiv = document.getElementById('backup-code-message');
     if (!username) {
       messageDiv.textContent = "Please enter your username above first.";
-      messageDiv.style.display = 'block';
       messageDiv.classList.remove('text-success');
       messageDiv.classList.add('text-danger');
+      messageDiv.style.display = 'block';
       return;
     }
 
@@ -115,17 +145,20 @@
     })
     .then(res => res.json())
     .then(data => {
-      if (data.success) {
-        messageDiv.textContent = data.message;
-        messageDiv.classList.remove('text-danger');
-        messageDiv.classList.add('text-success');
-      } else {
-        messageDiv.textContent = data.message || "Failed to send backup code.";
-        messageDiv.classList.remove('text-success');
-        messageDiv.classList.add('text-danger');
-      }
+      messageDiv.textContent = data.message;
+      messageDiv.classList.toggle('text-success', data.success);
+      messageDiv.classList.toggle('text-danger', !data.success);
       messageDiv.style.display = 'block';
+
+      if (data.success || data.cooldown) {
+        const now = Math.floor(Date.now() / 1000);
+        const cooldownEnd = now + (data.cooldown || cooldownDuration);
+        localStorage.setItem(cooldownKey, cooldownEnd);
+        disableBackupButton(data.cooldown || cooldownDuration);
+      }
     });
   });
+
+  checkCooldownOnLoad(); // On page load
 </script>
 {% endblock %}
