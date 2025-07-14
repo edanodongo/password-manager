@@ -361,7 +361,7 @@ def setup_2fa(request):
             user.is_2fa_enabled = True
             user.save()
             messages.success(request, "2FA has been successfully enabled.")
-            return redirect('profile')
+            return redirect('dashboard')
 
         messages.error(request, "Invalid OTP code. Please try again.")
 
