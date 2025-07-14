@@ -21,17 +21,14 @@
       </div>
 
       <div class="mb-3" id="otpField" style="display: none;">
-        <label class="form-label">Authenticator Code</label>
-        <input type="text" name="otp_token" class="form-control" autocomplete="one-time-code">
-        <p class="text-muted mt-2">
-        <form method="post" action="{% url 'send_backup_code_email' %}">
-          {% csrf_token %}
-          <button class="btn btn-warning btn-sm">Email me a Backup Code</button>
-        </form>
-      </p>
+        <label class="form-label" for="id_otp_token">Authenticator Code</label>
+        <input type="text" name="otp_token" id="id_otp_token" class="form-control" autocomplete="one-time-code" placeholder="Enter 6-digit code">
 
+        <div class="mt-2 d-grid">
+          <button type="button" class="btn btn-warning btn-sm" id="send-backup-code">Email me a Backup Code</button>
+          <div id="backup-code-message" class="small mt-2 text-success" style="display: none;"></div>
+        </div>
       </div>
-
 
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
@@ -51,10 +48,10 @@
   </div>
 </div>
 
-<!-- Bootstrap Icons & Font Awesome (optional) -->
+<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- Password toggle -->
+<!-- Password Toggle -->
 <script>
   document.querySelector('.toggle-password').addEventListener('click', function () {
     const pwd = document.getElementById('id_password');
@@ -91,6 +88,43 @@
       } else {
         otpField.style.display = 'none';
       }
+    });
+  });
+</script>
+
+<!-- AJAX: Send backup code -->
+<script>
+  document.getElementById('send-backup-code').addEventListener('click', function () {
+    const username = document.getElementById('username').value;
+    const messageDiv = document.getElementById('backup-code-message');
+    if (!username) {
+      messageDiv.textContent = "Please enter your username above first.";
+      messageDiv.style.display = 'block';
+      messageDiv.classList.remove('text-success');
+      messageDiv.classList.add('text-danger');
+      return;
+    }
+
+    fetch("{% url 'send_backup_code_email' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ username: username })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        messageDiv.textContent = data.message;
+        messageDiv.classList.remove('text-danger');
+        messageDiv.classList.add('text-success');
+      } else {
+        messageDiv.textContent = data.message || "Failed to send backup code.";
+        messageDiv.classList.remove('text-success');
+        messageDiv.classList.add('text-danger');
+      }
+      messageDiv.style.display = 'block';
     });
   });
 </script>
