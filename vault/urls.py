@@ -31,6 +31,10 @@ urlpatterns = [
 
     # Profile view
     path('profile/', views.profile_view, name='profile'),
+    
+    path('2fa/send-backup/', views.send_backup_code_email, name='send_backup_code_email'),
+
+    
 
     # Password reset request form
     path('password_reset/', auth_views.PasswordResetView.as_view(

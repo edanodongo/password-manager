@@ -408,3 +408,37 @@ def check_2fa_status(request):
         is_2fa_enabled = False
 
     return JsonResponse({'is_2fa_enabled': is_2fa_enabled})
+
+
+from django.core.mail import send_mail
+from .models import BackupCode
+from django.conf import settings
+import secrets
+
+@login_required
+def send_backup_code_email(request):
+    user = request.user
+    if not user.is_2fa_enabled:
+        messages.error(request, "2FA is not enabled.")
+        return redirect('profile')
+
+    # Get unused backup code or generate a new one
+    code = BackupCode.objects.filter(user=user, used=False).first()
+    if not code:
+        new_code = secrets.token_hex(4)
+        BackupCode.objects.create(user=user, code=new_code)
+        code_to_send = new_code
+    else:
+        code_to_send = code.code
+
+    # Send via email
+    send_mail(
+        subject="Your 2FA Backup Code",
+        message=f"Here is your backup code for logging in: {code_to_send}\n\nOnly use this if you cannot access your authenticator app.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+    messages.success(request, "A backup code has been sent to your email.")
+    return redirect('login')
