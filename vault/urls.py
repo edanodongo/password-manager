@@ -23,8 +23,18 @@ urlpatterns = [
     path('2fa/disable/', views.disable_2fa, name='disable_2fa'),
 
     
-    #path('profile/', views.user_profile, name='user_profile'),
+    # view to load the 2FA status via AJAX in profile page without page reload
+    # path('ajax/check-2fa/', views.check_2fa_status, name='check_2fa_status'),
+
+
+    path('ajax/check-2fa/', views.check_2fa_status, name='check_2fa_status'),
+
+    # Profile view
     path('profile/', views.profile_view, name='profile'),
+    
+    path('2fa/send-backup/', views.send_backup_code_email, name='send_backup_code_email'),
+
+    
 
     # Password reset request form
     path('password_reset/', auth_views.PasswordResetView.as_view(

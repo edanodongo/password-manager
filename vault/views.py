@@ -25,31 +25,58 @@ def register_view(request):
     return render(request, 'vault/register.html', {'form': form})
 
 
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        remember = request.POST.get('remember_me')  # checkbox in login form
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        otp_token = request.POST.get('otp_token')  # optional
+        remember = request.POST.get('remember_me')
 
+        # Step 1: Authenticate user credentials
         user = authenticate(request, username=username, password=password)
+
         if user is not None:
+            # Check if the user has a confirmed TOTP device
+            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+            has_2fa = device is not None
+
+            # If 2FA is enabled, require OTP token
+            if has_2fa:
+                if not otp_token:
+                    messages.error(request, "OTP code required.")
+                    return render(request, 'vault/login.html', {'username': username})
+
+                if not device.verify_token(otp_token):
+                    messages.error(request, "Invalid OTP code.")
+                    return render(request, 'vault/login.html', {'username': username})
+
+            # Finalize login
             login(request, user)
-            
-            # Sync is_2fa_enabled status on login
-            user.is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+
+            # Sync flag
+            user.is_2fa_enabled = has_2fa
             user.save()
 
+            # Handle "remember me"
             if remember:
                 request.session.set_expiry(1209600)  # 2 weeks
             else:
-                request.session.set_expiry(900)  # 15 minutes for example
+                request.session.set_expiry(900)  # 15 minutes
 
             return redirect('dashboard')
         else:
-            messages.error(request, "Invalid credentials")
+            messages.error(request, "Invalid username or password.")
 
     return render(request, 'vault/login.html')
 
@@ -293,6 +320,7 @@ from django.shortcuts import render, redirect
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib import messages
 import os
+import binascii
 
 @login_required
 def setup_2fa(request):
@@ -302,16 +330,23 @@ def setup_2fa(request):
     device, created = TOTPDevice.objects.get_or_create(user=user, confirmed=False)
 
     if created or not device.key:
-        # Proper base32 key
-        raw_key = os.urandom(10)  # 80 bits of randomness
-        base32_key = base64.b32encode(raw_key).decode('utf-8').replace('=', '')  # remove padding
-        device.key = base32_key
+        # Generate raw secret (10 bytes = 80 bits)
+        raw_key = os.urandom(10)
+
+        # Store HEX for django-otp
+        hex_key = binascii.hexlify(raw_key).decode()
+        device.key = hex_key
         device.save()
 
-    totp = pyotp.TOTP(device.key)
+    # Convert hex key → base32 for TOTP (pyotp)
+    raw_key_bytes = binascii.unhexlify(device.key)
+    base32_key = base64.b32encode(raw_key_bytes).decode('utf-8').replace('=', '')
+
+    # Generate provisioning URI
+    totp = pyotp.TOTP(base32_key)
     otp_uri = totp.provisioning_uri(name=user.email or user.username, issuer_name="Password Manager")
 
-    # Generate base64 PNG QR
+    # Generate QR Code as base64 PNG
     qr = qrcode.make(otp_uri)
     buffer = BytesIO()
     qr.save(buffer, format='PNG')
@@ -323,11 +358,10 @@ def setup_2fa(request):
         if totp.verify(code):
             device.confirmed = True
             device.save()
-            user.is_2fa_enabled = True  # ✅ Set flag
+            user.is_2fa_enabled = True
             user.save()
             messages.success(request, "2FA has been successfully enabled.")
-            return redirect('profile')
-
+            return redirect('dashboard')
 
         messages.error(request, "Invalid OTP code. Please try again.")
 
@@ -344,3 +378,67 @@ def disable_2fa(request):
     user.save()
     messages.success(request, "Two-factor authentication has been disabled.")
     return redirect('profile')
+
+# view to load the 2FA status via AJAX in profile page without page reload
+# from django.http import JsonResponse
+# from django.contrib.auth.decorators import login_required
+
+# @login_required
+# def check_2fa_status(request):
+#     is_enabled = request.user.is_2fa_enabled
+#     return JsonResponse({'is_2fa_enabled': is_enabled})
+
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+from django.contrib.auth import get_user_model
+from django_otp.plugins.otp_totp.models import TOTPDevice
+
+@csrf_exempt
+def check_2fa_status(request):
+    data = json.loads(request.body)
+    username = data.get('username')
+    User = get_user_model()
+    try:
+        user = User.objects.get(username=username)
+        is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+    except User.DoesNotExist:
+        is_2fa_enabled = False
+
+    return JsonResponse({'is_2fa_enabled': is_2fa_enabled})
+
+
+from django.core.mail import send_mail
+from .models import BackupCode
+from django.conf import settings
+import secrets
+
+@login_required
+def send_backup_code_email(request):
+    user = request.user
+    if not user.is_2fa_enabled:
+        messages.error(request, "2FA is not enabled.")
+        return redirect('profile')
+
+    # Get unused backup code or generate a new one
+    code = BackupCode.objects.filter(user=user, used=False).first()
+    if not code:
+        new_code = secrets.token_hex(4)
+        BackupCode.objects.create(user=user, code=new_code)
+        code_to_send = new_code
+    else:
+        code_to_send = code.code
+
+    # Send via email
+    send_mail(
+        subject="Your 2FA Backup Code",
+        message=f"Here is your backup code for logging in: {code_to_send}\n\nOnly use this if you cannot access your authenticator app.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+    messages.success(request, "A backup code has been sent to your email.")
+    return redirect('login')

@@ -34,6 +34,20 @@
               {% endif %}
             </div>
 
+            <h5>Two-Factor Authentication</h5>
+            {% comment %} 
+            # For loading the 2FA status via AJAX in profile page without page reload
+            <span id="2fa-status" class="badge {% if user.is_2fa_enabled %}bg-success{% else %}bg-danger{% endif %}">
+              {% if user.is_2fa_enabled %}Enabled{% else %}Disabled{% endif %}
+            </span>
+
+            <form method="post" action="{% url 'disable_2fa' %}" id="2fa-form">
+              {% csrf_token %}
+              <button id="2fa-toggle-btn" class="btn {% if user.is_2fa_enabled %}btn-danger{% else %}btn-primary{% endif %}">
+                {% if user.is_2fa_enabled %}Disable 2FA{% else %}Enable 2FA{% endif %}
+              </button>
+            </form> {% endcomment %}
+
           </p>
         </div>
       </div>
@@ -101,6 +115,33 @@
       card.classList.toggle('border-light');
     });
   });
+{% comment %}   
+  # script to load the 2FA status via AJAX in profile page without page reload
+  function check2FAStatus() {
+    fetch("{% url 'check_2fa_status' %}")
+      .then(response => response.json())
+      .then(data => {
+        const statusBadge = document.getElementById('2fa-status');
+        const toggleBtn = document.getElementById('2fa-toggle-btn');
+
+        if (data.is_2fa_enabled) {
+          statusBadge.innerText = "Enabled";
+          statusBadge.className = "badge bg-success";
+          toggleBtn.innerHTML = "Disable 2FA";
+          toggleBtn.className = "btn btn-danger";
+        } else {
+          statusBadge.innerText = "Disabled";
+          statusBadge.className = "badge bg-danger";
+          toggleBtn.innerHTML = "Enable 2FA";
+          toggleBtn.className = "btn btn-primary";
+        }
+      });
+  }
+
+  // Check every 10 seconds (optional)
+  setInterval(check2FAStatus, 10000);
+  window.onload = check2FAStatus; {% endcomment %}
 </script>
+
 
 {% endblock %}

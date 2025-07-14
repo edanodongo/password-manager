@@ -1,7 +1,8 @@
 {% extends 'vault/base.html' %}
 {% block content %}
 <div class="container mt-5 d-flex flex-column align-items-center">
-  <h2 class="text-center">Set Up Two-Factor Authentication</h2>
+  <h3 class="text-center"><span >Hi, {{ user.email }}</span></h3>
+  <h2 class="text-center">Let's set Up Two-Factor Authentication</h2>
   <p class="text-center">Scan this QR code using your authenticator app and enter the 6-digit code it gives you.</p>
 
   {% if qr_code %}
