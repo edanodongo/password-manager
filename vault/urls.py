@@ -27,11 +27,9 @@ urlpatterns = [
     # path('ajax/check-2fa/', views.check_2fa_status, name='check_2fa_status'),
 
 
+    path('ajax/check-2fa/', views.check_2fa_status, name='check_2fa_status'),
 
-
-    path('ajax/check-user-2fa/', views.check_user_2fa, name='check_user_2fa'),
-
-
+    # Profile view
     path('profile/', views.profile_view, name='profile'),
 
     # Password reset request form

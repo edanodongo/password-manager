@@ -388,18 +388,22 @@ def disable_2fa(request):
 #     is_enabled = request.user.is_2fa_enabled
 #     return JsonResponse({'is_2fa_enabled': is_enabled})
 
-
-from django.views.decorators.http import require_GET
+# vault/views.py
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
 from django.contrib.auth import get_user_model
-User = get_user_model()
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
-@require_GET
-def check_user_2fa(request):
-    username = request.GET.get("username")
+@csrf_exempt
+def check_2fa_status(request):
+    data = json.loads(request.body)
+    username = data.get('username')
+    User = get_user_model()
     try:
         user = User.objects.get(username=username)
-        requires_2fa = user.is_2fa_enabled
+        is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     except User.DoesNotExist:
-        requires_2fa = False
+        is_2fa_enabled = False
 
-    return JsonResponse({'requires_2fa': requires_2fa})
+    return JsonResponse({'is_2fa_enabled': is_2fa_enabled})

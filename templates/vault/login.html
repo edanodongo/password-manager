@@ -5,12 +5,13 @@
 <div class="card mx-auto shadow-sm" style="max-width: 500px;">
   <div class="card-body">
     <h4 class="card-title mb-4">Login</h4>
-    <form method="post">
+    <form method="post" id="loginForm">
       {% csrf_token %}
       <div class="mb-3">
         <label class="form-label">Username</label>
-        <input type="text" name="username" class="form-control" required>
+        <input type="text" name="username" id="username" class="form-control" required value="{{ request.POST.username|default:'' }}">
       </div>
+
       <div class="mb-3 position-relative">
         <label class="form-label">Password</label>
         <input type="password" name="password" class="form-control" id="id_password" required>
@@ -18,33 +19,71 @@
           <i class="fa fa-eye" aria-hidden="true"></i>
         </span>
       </div>
-        {% if otp_required %}
-          <div class="mb-3">
-            <label>Authenticator Code</label>
-            <input type="text" name="otp_token" class="form-control" required>
-          </div>
-        {% endif %}
+
+      <div class="mb-3" id="otpField" style="display: none;">
+        <label class="form-label">Authenticator Code</label>
+        <input type="text" name="otp_token" class="form-control" autocomplete="one-time-code">
+      </div>
+
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
         <label class="form-check-label" for="rememberMe">Remember me</label>
       </div>
-      <button type="submit" class="btn btn-success w-100"> {% if otp_required %}Verify Code{% else %}Login{% endif %}</button>
-     
+
+      <button type="submit" class="btn btn-success w-100">Login</button>
+
       <p class="mt-3 text-center">
         <a href="{% url 'password_reset' %}">Forgot your password?</a>
       </p>
     </form>
+
     <p class="mt-3 text-center">
       Don't have an account? <a href="{% url 'register' %}">Register</a>
     </p>
   </div>
 </div>
 
+<!-- Bootstrap Icons & Font Awesome (optional) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Password toggle -->
+<script>
+  document.querySelector('.toggle-password').addEventListener('click', function () {
+    const pwd = document.getElementById('id_password');
+    const icon = this.querySelector('i');
+    if (pwd.type === 'password') {
+      pwd.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      pwd.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  });
+</script>
+
+<!-- AJAX: Auto show OTP field if 2FA is enabled -->
+<script>
+  document.getElementById('username').addEventListener('blur', function () {
+    const username = this.value;
+    if (!username) return;
+
+    fetch("{% url 'check_2fa_status' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ username: username })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const otpField = document.getElementById('otpField');
+      if (data.is_2fa_enabled) {
+        otpField.style.display = 'block';
+      } else {
+        otpField.style.display = 'none';
+      }
+    });
+  });
+</script>
 {% endblock %}
-
-
-
-
-
-
-
