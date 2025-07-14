@@ -396,3 +396,12 @@ def disable_2fa(request):
     user.save()
     messages.success(request, "Two-factor authentication has been disabled.")
     return redirect('profile')
+
+
+# from django.http import JsonResponse
+# from django.contrib.auth.decorators import login_required
+
+# @login_required
+# def check_2fa_status(request):
+#     is_enabled = request.user.is_2fa_enabled
+#     return JsonResponse({'is_2fa_enabled': is_enabled})
