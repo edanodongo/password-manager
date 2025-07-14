@@ -470,3 +470,39 @@ def send_backup_code_email(request):
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
 
     return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from .models import Credential  # your credential model
+
+User = get_user_model()
+
+@csrf_exempt
+def save_credential_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Only POST allowed'}, status=405)
+
+    api_key = request.headers.get('X-API-KEY')
+    if not api_key:
+        return JsonResponse({'success': False, 'message': 'API key required'}, status=401)
+
+    user = User.objects.filter(api_key=api_key).first()
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Invalid API key'}, status=403)
+
+    import json
+    data = json.loads(request.body)
+
+    Credential.objects.create(
+        user=user,
+        site=data.get('site'),
+        username=data.get('username'),
+        password=data.get('password')  # encrypt this in your real model!
+    )
+
+    return JsonResponse({'success': True})

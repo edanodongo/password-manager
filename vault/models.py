@@ -2,13 +2,12 @@ from django.db import models
 from .utils.crypto import encrypt, decrypt
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+import secrets
 
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-
-User = get_user_model()
 
 
 
@@ -17,6 +16,7 @@ User = get_user_model()
 class CustomUser(AbstractUser):
     # Add a flag to check if 2FA is enabled
     is_2fa_enabled = models.BooleanField(default=False)
+    api_key = models.CharField(max_length=64, default=secrets.token_hex, unique=True)
 
     def has_2fa_device(self):
         return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
@@ -86,6 +86,8 @@ class SecurityLog(models.Model):
 
 
 # Backup code model for 2FA backup codes
+
+User = get_user_model()
 
 class BackupCode(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

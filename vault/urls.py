@@ -4,6 +4,8 @@ from . import views
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 
+from .api import StoreCredentialAPI
+
 urlpatterns = [
     # User registration and authentication URLs
     path('register', views.register_view, name='register'),
@@ -43,13 +45,21 @@ urlpatterns = [
 
     # 2FA verification URL
     # This URL is used to verify the 2FA code entered by the user.
-    path('2fa/verify/', views.verify_2fa, name='verify_2fa'),
+    path('ajax/check-2fa/', views.check_2fa_status, name='check_2fa_status'),
 
 
     # Profile view
     path('profile/', views.profile_view, name='profile'),
     
     
+
+    # api endpoint for storing credentials
+    # This endpoint allows authenticated users to store credentials via an API request.
+    path('api/save-credential/', views.save_credential_api, name='save_credential_api'),
+    
+    
+    
+
     # backup code generation and email sending
     path('2fa/send-backup/', views.send_backup_code_email, name='send_backup_code_email'),
     path('2fa/send-backup-code/', views.send_backup_code_email, name='send_backup_code_email'),
@@ -82,5 +92,9 @@ urlpatterns = [
         template_name='pass_reset/password_reset_complete.html'
     ), name='password_reset_complete'),
 
+
+    # API endpoint for storing credentials
+    # This endpoint allows authenticated users to store credentials via an API request.
+    path('api/store/', StoreCredentialAPI.as_view(), name='api_store_credential'),
 ]
 # Note: The views are defined in vault/views.py and handle the logic for each URL.
