@@ -25,10 +25,11 @@ def register_view(request):
     return render(request, 'vault/register.html', {'form': form})
 
 
-from django.contrib.auth import authenticate, login, get_user_model
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from django.shortcuts import render, redirect
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -39,60 +40,41 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        otp_token = request.POST.get('otp_token')
+        otp_token = request.POST.get('otp_token')  # optional
         remember = request.POST.get('remember_me')
 
-        # Case 1: OTP submission step
-        if 'pre_2fa_user_id' in request.session:
-            try:
-                user = User.objects.get(id=request.session['pre_2fa_user_id'])
-            except User.DoesNotExist:
-                messages.error(request, "Session expired. Please try again.")
-                return redirect('login')
-
-            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
-            if device and device.verify_token(otp_token):
-                login(request, user)
-                user.is_2fa_enabled = True
-                user.save()
-                del request.session['pre_2fa_user_id']
-
-                # Set session expiry
-                if remember:
-                    request.session.set_expiry(1209600)
-                else:
-                    request.session.set_expiry(900)
-
-                return redirect('dashboard')
-            else:
-                messages.error(request, "Invalid OTP code.")
-                return render(request, 'vault/login.html', {
-                    'otp_required': True,
-                    'username': user.username,
-                })
-
-        # Case 2: Password login step
+        # Step 1: Authenticate user credentials
         user = authenticate(request, username=username, password=password)
-        if user:
-            if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
-                # Save pending login to session and ask for OTP
-                request.session['pre_2fa_user_id'] = user.id
-                return render(request, 'vault/login.html', {
-                    'otp_required': True,
-                    'username': username,
-                })
+
+        if user is not None:
+            # Check if the user has a confirmed TOTP device
+            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+            has_2fa = device is not None
+
+            # If 2FA is enabled, require OTP token
+            if has_2fa:
+                if not otp_token:
+                    messages.error(request, "OTP code required.")
+                    return render(request, 'vault/login.html', {'username': username})
+
+                if not device.verify_token(otp_token):
+                    messages.error(request, "Invalid OTP code.")
+                    return render(request, 'vault/login.html', {'username': username})
+
+            # Finalize login
+            login(request, user)
+
+            # Sync flag
+            user.is_2fa_enabled = has_2fa
+            user.save()
+
+            # Handle "remember me"
+            if remember:
+                request.session.set_expiry(1209600)  # 2 weeks
             else:
-                # No 2FA enabled → login directly
-                login(request, user)
-                user.is_2fa_enabled = False
-                user.save()
+                request.session.set_expiry(900)  # 15 minutes
 
-                if remember:
-                    request.session.set_expiry(1209600)
-                else:
-                    request.session.set_expiry(900)
-
-                return redirect('dashboard')
+            return redirect('dashboard')
         else:
             messages.error(request, "Invalid username or password.")
 
@@ -397,7 +379,7 @@ def disable_2fa(request):
     messages.success(request, "Two-factor authentication has been disabled.")
     return redirect('profile')
 
-
+# view to load the 2FA status via AJAX in profile page without page reload
 # from django.http import JsonResponse
 # from django.contrib.auth.decorators import login_required
 
@@ -405,3 +387,19 @@ def disable_2fa(request):
 # def check_2fa_status(request):
 #     is_enabled = request.user.is_2fa_enabled
 #     return JsonResponse({'is_2fa_enabled': is_enabled})
+
+
+from django.views.decorators.http import require_GET
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+@require_GET
+def check_user_2fa(request):
+    username = request.GET.get("username")
+    try:
+        user = User.objects.get(username=username)
+        requires_2fa = user.is_2fa_enabled
+    except User.DoesNotExist:
+        requires_2fa = False
+
+    return JsonResponse({'requires_2fa': requires_2fa})

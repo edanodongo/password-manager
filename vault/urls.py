@@ -22,7 +22,15 @@ urlpatterns = [
     path('2fa/setup/', views.setup_2fa, name='setup_2fa'),
     path('2fa/disable/', views.disable_2fa, name='disable_2fa'),
 
+    
+    # view to load the 2FA status via AJAX in profile page without page reload
     # path('ajax/check-2fa/', views.check_2fa_status, name='check_2fa_status'),
+
+
+
+
+    path('ajax/check-user-2fa/', views.check_user_2fa, name='check_user_2fa'),
+
 
     path('profile/', views.profile_view, name='profile'),
 

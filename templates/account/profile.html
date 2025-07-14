@@ -35,7 +35,9 @@
             </div>
 
             <h5>Two-Factor Authentication</h5>
-            {% comment %} <span id="2fa-status" class="badge {% if user.is_2fa_enabled %}bg-success{% else %}bg-danger{% endif %}">
+            {% comment %} 
+            # For loading the 2FA status via AJAX in profile page without page reload
+            <span id="2fa-status" class="badge {% if user.is_2fa_enabled %}bg-success{% else %}bg-danger{% endif %}">
               {% if user.is_2fa_enabled %}Enabled{% else %}Disabled{% endif %}
             </span>
 
@@ -114,6 +116,7 @@
     });
   });
 {% comment %}   
+  # script to load the 2FA status via AJAX in profile page without page reload
   function check2FAStatus() {
     fetch("{% url 'check_2fa_status' %}")
       .then(response => response.json())
