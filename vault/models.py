@@ -5,6 +5,15 @@ from django.conf import settings
 
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+User = get_user_model()
+
+
+
+# Custom user model to support 2FA
+
 class CustomUser(AbstractUser):
     # Add a flag to check if 2FA is enabled
     is_2fa_enabled = models.BooleanField(default=False)
@@ -12,6 +21,9 @@ class CustomUser(AbstractUser):
     def has_2fa_device(self):
         return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
 
+
+
+# Credential model for storing user credentials
 
 class Credential(models.Model):
     PLATFORM_CHOICES = [
@@ -40,15 +52,18 @@ class Credential(models.Model):
         return f"{self.name} ({self.platform_type})"
 
 
-from django.db import models
+
+# Cybersecurity tips model for storing tips
 
 class CyberTip(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+
     
 # a model for session history
+
 class LoginRecord(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     ip_address = models.GenericIPAddressField()
@@ -59,6 +74,9 @@ class LoginRecord(models.Model):
         return f"{self.user} - {self.timestamp} ({self.ip_address})"
 
 
+
+# Security log model for tracking security-related actions
+
 class SecurityLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     action = models.CharField(max_length=100)
@@ -66,11 +84,8 @@ class SecurityLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
 
-from django.db import models
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 
-User = get_user_model()
+# Backup code model for 2FA backup codes
 
 class BackupCode(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
