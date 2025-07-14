@@ -418,15 +418,13 @@ def check_2fa_status(request):
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+import json, secrets, time
 from .models import BackupCode
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
-import secrets
-import json
-import time
-
-User = get_user_model()
+from django.utils import timezone
+from datetime import timedelta
 
 @csrf_exempt
 def send_backup_code_email(request):
@@ -442,36 +440,34 @@ def send_backup_code_email(request):
             if not user.is_2fa_enabled:
                 return JsonResponse({'success': False, 'message': '2FA is not enabled for this user'})
 
-            # Rate limit: 5 minutes (300 seconds)
-            last_sent = request.session.get(f'backup_code_last_sent_{username}')
-            now = int(time.time())
-            cooldown = 300  # 5 minutes
+            cooldown_period = timedelta(minutes=5)
+            now = timezone.now()
 
-            if last_sent and now - last_sent < cooldown:
-                remaining = cooldown - (now - last_sent)
-                return JsonResponse({'success': False, 'message': f'Please wait {remaining} seconds before requesting another backup code.', 'cooldown': remaining})
+            # Get or create a backup code
+            code = BackupCode.objects.filter(user=user, used=False).order_by('-last_sent_at').first()
+            if code and now - code.last_sent_at < cooldown_period:
+                remaining = int((cooldown_period - (now - code.last_sent_at)).total_seconds())
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Please wait {remaining} seconds before requesting a new backup code.",
+                    'cooldown': remaining
+                })
 
-            # Get or generate backup code
-            code = BackupCode.objects.filter(user=user, used=False).first()
             if not code:
-                new_code = secrets.token_hex(4)
-                BackupCode.objects.create(user=user, code=new_code)
-                code_to_send = new_code
-            else:
-                code_to_send = code.code
+                code = BackupCode.objects.create(user=user, code=secrets.token_hex(4))
+            code.last_sent_at = now
+            code.save()
 
+            # Send the email
             send_mail(
                 subject="Your 2FA Backup Code",
-                message=f"Here is your backup code: {code_to_send}\n\nOnly use this if you can't access your authenticator app.",
+                message=f"Your backup code is: {code.code}",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
             )
 
-            # Store timestamp in session
-            request.session[f'backup_code_last_sent_{username}'] = now
-
-            return JsonResponse({'success': True, 'message': 'Backup code has been sent to your email.', 'cooldown': cooldown})
+            return JsonResponse({'success': True, 'message': 'Backup code sent.', 'cooldown': 300})
 
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
