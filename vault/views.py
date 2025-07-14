@@ -390,39 +390,54 @@ def disable_2fa(request):
 
 
 
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
+import json
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-@csrf_exempt
-def check_2fa_status(request):
-    data = json.loads(request.body)
-    username = data.get('username')
-    User = get_user_model()
-    try:
-        user = User.objects.get(username=username)
-        is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
-    except User.DoesNotExist:
-        is_2fa_enabled = False
+User = get_user_model()
 
-    return JsonResponse({'is_2fa_enabled': is_2fa_enabled})
+@csrf_exempt  # if needed; better to use proper CSRF token
+@require_POST
+def check_2fa_status(request):
+    try:
+        data = json.loads(request.body)
+        username = data.get("username", "").strip()
+
+        if not username:
+            return JsonResponse({"error": "Username required"}, status=400)
+
+        user = User.objects.filter(username=username).first()
+        if not user:
+            return JsonResponse({"is_2fa_enabled": False})  # user not found yet
+
+        has_2fa = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+        return JsonResponse({"is_2fa_enabled": has_2fa})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 from django.core.mail import send_mail
 from .models import BackupCode
 from django.conf import settings
 import secrets
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.http import JsonResponse
 
 @login_required
 def send_backup_code_email(request):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
     user = request.user
     if not user.is_2fa_enabled:
-        messages.error(request, "2FA is not enabled.")
-        return redirect('profile')
+        return JsonResponse({"message": "2FA is not enabled."}, status=400)
 
-    # Get unused backup code or generate a new one
     code = BackupCode.objects.filter(user=user, used=False).first()
     if not code:
         new_code = secrets.token_hex(4)
@@ -431,14 +446,12 @@ def send_backup_code_email(request):
     else:
         code_to_send = code.code
 
-    # Send via email
     send_mail(
         subject="Your 2FA Backup Code",
-        message=f"Here is your backup code for logging in: {code_to_send}\n\nOnly use this if you cannot access your authenticator app.",
+        message=f"Here is your backup code: {code_to_send}",
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
         fail_silently=False,
     )
 
-    messages.success(request, "A backup code has been sent to your email.")
-    return redirect('login')
+    return JsonResponse({"message": "A backup code has been sent to your email."})

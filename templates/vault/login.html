@@ -24,8 +24,12 @@
         <label class="form-label">Authenticator Code</label>
         <input type="text" name="otp_token" class="form-control" autocomplete="one-time-code">
         <p class="text-muted mt-2">
-          <a href="{% url 'send_backup_code_email' %}">Can't access your authenticator app?</a>
-        </p>
+        <form method="post" action="{% url 'send_backup_code_email' %}">
+          {% csrf_token %}
+          <button class="btn btn-warning btn-sm">Email me a Backup Code</button>
+        </form>
+      </p>
+
       </div>
 
 

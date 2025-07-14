@@ -33,6 +33,7 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     
     path('2fa/send-backup/', views.send_backup_code_email, name='send_backup_code_email'),
+    path('2fa/send-backup-code/', views.send_backup_code_email, name='send_backup_code_email'),
 
     
 
