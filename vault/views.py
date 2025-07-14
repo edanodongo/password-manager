@@ -24,12 +24,12 @@ def register_view(request):
 
     return render(request, 'vault/register.html', {'form': form})
 
-
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib.auth import get_user_model
+from .models import BackupCode  # make sure this is correct
 
 User = get_user_model()
 
@@ -47,32 +47,39 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            # Check if the user has a confirmed TOTP device
             device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
             has_2fa = device is not None
 
-            # If 2FA is enabled, require OTP token
             if has_2fa:
                 if not otp_token:
-                    messages.error(request, "OTP code required.")
-                    return render(request, 'vault/login.html', {'username': username})
+                    messages.error(request, "OTP or backup code is required.")
+                    return render(request, 'vault/login.html', {'username': username, 'otp_required': True})
 
-                if not device.verify_token(otp_token):
-                    messages.error(request, "Invalid OTP code.")
-                    return render(request, 'vault/login.html', {'username': username})
+                # Try verifying TOTP
+                if device.verify_token(otp_token):
+                    login(request, user)
+                else:
+                    # Check for valid backup code
+                    backup = BackupCode.objects.filter(user=user, code=otp_token, used=False).first()
+                    if backup:
+                        backup.used = True
+                        backup.save()
+                        login(request, user)
+                        messages.warning(request, "Backup code used. Please reconfigure 2FA.")
+                        return redirect('setup_2fa')  # force new 2FA setup
+                    else:
+                        messages.error(request, "Invalid OTP or backup code.")
+                        return render(request, 'vault/login.html', {'username': username, 'otp_required': True})
+            else:
+                # No 2FA required
+                login(request, user)
 
-            # Finalize login
-            login(request, user)
-
-            # Sync flag
-            user.is_2fa_enabled = has_2fa
+            # Sync 2FA flag
+            user.is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
             user.save()
 
-            # Handle "remember me"
-            if remember:
-                request.session.set_expiry(1209600)  # 2 weeks
-            else:
-                request.session.set_expiry(900)  # 15 minutes
+            # Session expiry
+            request.session.set_expiry(1209600 if remember else 900)
 
             return redirect('dashboard')
         else:
@@ -409,36 +416,60 @@ def check_2fa_status(request):
 
     return JsonResponse({'is_2fa_enabled': is_2fa_enabled})
 
-
-from django.core.mail import send_mail
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json, secrets, time
 from .models import BackupCode
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
 from django.conf import settings
-import secrets
+from django.utils import timezone
+from datetime import timedelta
 
-@login_required
+@csrf_exempt
 def send_backup_code_email(request):
-    user = request.user
-    if not user.is_2fa_enabled:
-        messages.error(request, "2FA is not enabled.")
-        return redirect('profile')
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            user = User.objects.filter(username=username).first()
 
-    # Get unused backup code or generate a new one
-    code = BackupCode.objects.filter(user=user, used=False).first()
-    if not code:
-        new_code = secrets.token_hex(4)
-        BackupCode.objects.create(user=user, code=new_code)
-        code_to_send = new_code
-    else:
-        code_to_send = code.code
+            if not user:
+                return JsonResponse({'success': False, 'message': 'User not found'})
 
-    # Send via email
-    send_mail(
-        subject="Your 2FA Backup Code",
-        message=f"Here is your backup code for logging in: {code_to_send}\n\nOnly use this if you cannot access your authenticator app.",
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+            if not user.is_2fa_enabled:
+                return JsonResponse({'success': False, 'message': '2FA is not enabled for this user'})
 
-    messages.success(request, "A backup code has been sent to your email.")
-    return redirect('login')
+            cooldown_period = timedelta(minutes=5)
+            now = timezone.now()
+
+            # Get or create a backup code
+            code = BackupCode.objects.filter(user=user, used=False).order_by('-last_sent_at').first()
+            if code and now - code.last_sent_at < cooldown_period:
+                remaining = int((cooldown_period - (now - code.last_sent_at)).total_seconds())
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Please wait {remaining} seconds before requesting a new backup code.",
+                    'cooldown': remaining
+                })
+
+            if not code:
+                code = BackupCode.objects.create(user=user, code=secrets.token_hex(4))
+            code.last_sent_at = now
+            code.save()
+
+            # Send the email
+            send_mail(
+                subject="Your 2FA Backup Code",
+                message=f"Your backup code is: {code.code}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+
+            return JsonResponse({'success': True, 'message': 'Backup code sent.', 'cooldown': 300})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+    return JsonResponse({'success': False, 'message': 'Invalid request'})

@@ -66,3 +66,15 @@ class SecurityLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
 
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+User = get_user_model()
+
+class BackupCode(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    code = models.CharField(max_length=20)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_sent_at = models.DateTimeField(default=timezone.now)

@@ -1,3 +1,18 @@
+{% extends 'vault/base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2>Backup Codes</h2>
+  <p>Save these one-time use backup codes in a safe place. You can use them to log in if you lose access to your Authenticator app.</p>
+  <ul class="list-group">
+    {% for code in codes %}
+      <li class="list-group-item">{{ code }}</li>
+    {% endfor %}
+  </ul>
+  <a href="{% url 'profile' %}" class="btn btn-primary mt-3">Finish</a>
+</div>
+{% endblock %}
+
+{% comment %} 
 {% extends 'account/base.html' %}
 {% block content %}
   <div class="container">
@@ -19,4 +34,4 @@
       <button class="btn btn-warning mt-3">Generate New Codes</button>
     </form>
   </div>
-{% endblock %}
+{% endblock %} {% endcomment %}

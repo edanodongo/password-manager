@@ -21,13 +21,14 @@
       </div>
 
       <div class="mb-3" id="otpField" style="display: none;">
-        <label class="form-label">Authenticator Code</label>
-        <input type="text" name="otp_token" class="form-control" autocomplete="one-time-code">
-        <p class="text-muted mt-2">
-          <a href="{% url 'send_backup_code_email' %}">Can't access your authenticator app?</a>
-        </p>
-      </div>
+        <label class="form-label" for="id_otp_token">Authenticator Code</label>
+        <input type="text" name="otp_token" id="id_otp_token" class="form-control" autocomplete="one-time-code" placeholder="Enter 6-digit code">
 
+        <div class="mt-2 d-grid">
+          <button type="button" class="btn btn-warning btn-sm" id="send-backup-code">Email me a Backup Code</button>
+          <div id="backup-code-message" class="small mt-2 text-success" style="display: none;"></div>
+        </div>
+      </div>
 
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
@@ -47,10 +48,10 @@
   </div>
 </div>
 
-<!-- Bootstrap Icons & Font Awesome (optional) -->
+<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- Password toggle -->
+<!-- Password Toggle -->
 <script>
   document.querySelector('.toggle-password').addEventListener('click', function () {
     const pwd = document.getElementById('id_password');
@@ -89,5 +90,75 @@
       }
     });
   });
+</script>
+
+<!-- AJAX: Send backup code with persistent cooldown -->
+<script>
+  const backupButton = document.getElementById('send-backup-code');
+  const messageDiv = document.getElementById('backup-code-message');
+  const cooldownKey = 'backup_code_cooldown';
+  const cooldownDuration = 300; // 5 minutes
+
+  function disableBackupButton(seconds) {
+    backupButton.disabled = true;
+    let remaining = seconds;
+    backupButton.textContent = `Wait ${remaining}s`;
+
+    const interval = setInterval(() => {
+      remaining--;
+      backupButton.textContent = `Wait ${remaining}s`;
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        backupButton.disabled = false;
+        backupButton.textContent = 'Email me a Backup Code';
+        localStorage.removeItem(cooldownKey);
+      }
+    }, 1000);
+  }
+
+  function checkCooldownOnLoad() {
+    const cooldownEnd = parseInt(localStorage.getItem(cooldownKey), 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (cooldownEnd && cooldownEnd > now) {
+      disableBackupButton(cooldownEnd - now);
+    }
+  }
+
+  backupButton.addEventListener('click', function () {
+    const username = document.getElementById('username').value;
+    if (!username) {
+      messageDiv.textContent = "Please enter your username above first.";
+      messageDiv.classList.remove('text-success');
+      messageDiv.classList.add('text-danger');
+      messageDiv.style.display = 'block';
+      return;
+    }
+
+    fetch("{% url 'send_backup_code_email' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ username: username })
+    })
+    .then(res => res.json())
+    .then(data => {
+      messageDiv.textContent = data.message;
+      messageDiv.classList.toggle('text-success', data.success);
+      messageDiv.classList.toggle('text-danger', !data.success);
+      messageDiv.style.display = 'block';
+
+      if (data.success || data.cooldown) {
+        const now = Math.floor(Date.now() / 1000);
+        const cooldownEnd = now + (data.cooldown || cooldownDuration);
+        localStorage.setItem(cooldownKey, cooldownEnd);
+        disableBackupButton(data.cooldown || cooldownDuration);
+      }
+    });
+  });
+
+  checkCooldownOnLoad(); // On page load
 </script>
 {% endblock %}

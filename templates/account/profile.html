@@ -34,8 +34,16 @@
               {% endif %}
             </div>
 
-            <h5>Two-Factor Authentication</h5>
+            {% if user.is_2fa_enabled %}
+              <form method="post" action="{% url 'send_backup_code_email' %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-warning btn-sm mt-2">Send Backup Code to Email</button>
+              </form>
+            {% endif %}
+
+
             {% comment %} 
+            <h5>Two-Factor Authentication</h5>
             # For loading the 2FA status via AJAX in profile page without page reload
             <span id="2fa-status" class="badge {% if user.is_2fa_enabled %}bg-success{% else %}bg-danger{% endif %}">
               {% if user.is_2fa_enabled %}Enabled{% else %}Disabled{% endif %}
