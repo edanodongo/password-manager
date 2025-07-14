@@ -388,7 +388,8 @@ def disable_2fa(request):
 #     is_enabled = request.user.is_2fa_enabled
 #     return JsonResponse({'is_2fa_enabled': is_enabled})
 
-# vault/views.py
+
+
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
