@@ -25,31 +25,76 @@ def register_view(request):
     return render(request, 'vault/register.html', {'form': form})
 
 
+from django.contrib.auth import authenticate, login, get_user_model
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.shortcuts import render, redirect
+from django.contrib import messages
+
+User = get_user_model()
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        remember = request.POST.get('remember_me')  # checkbox in login form
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        otp_token = request.POST.get('otp_token')
+        remember = request.POST.get('remember_me')
 
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            
-            # Sync is_2fa_enabled status on login
-            user.is_2fa_enabled = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
-            user.save()
+        # Case 1: OTP submission step
+        if 'pre_2fa_user_id' in request.session:
+            try:
+                user = User.objects.get(id=request.session['pre_2fa_user_id'])
+            except User.DoesNotExist:
+                messages.error(request, "Session expired. Please try again.")
+                return redirect('login')
 
-            if remember:
-                request.session.set_expiry(1209600)  # 2 weeks
+            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+            if device and device.verify_token(otp_token):
+                login(request, user)
+                user.is_2fa_enabled = True
+                user.save()
+                del request.session['pre_2fa_user_id']
+
+                # Set session expiry
+                if remember:
+                    request.session.set_expiry(1209600)
+                else:
+                    request.session.set_expiry(900)
+
+                return redirect('dashboard')
             else:
-                request.session.set_expiry(900)  # 15 minutes for example
+                messages.error(request, "Invalid OTP code.")
+                return render(request, 'vault/login.html', {
+                    'otp_required': True,
+                    'username': user.username,
+                })
 
-            return redirect('dashboard')
+        # Case 2: Password login step
+        user = authenticate(request, username=username, password=password)
+        if user:
+            if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
+                # Save pending login to session and ask for OTP
+                request.session['pre_2fa_user_id'] = user.id
+                return render(request, 'vault/login.html', {
+                    'otp_required': True,
+                    'username': username,
+                })
+            else:
+                # No 2FA enabled → login directly
+                login(request, user)
+                user.is_2fa_enabled = False
+                user.save()
+
+                if remember:
+                    request.session.set_expiry(1209600)
+                else:
+                    request.session.set_expiry(900)
+
+                return redirect('dashboard')
         else:
-            messages.error(request, "Invalid credentials")
+            messages.error(request, "Invalid username or password.")
 
     return render(request, 'vault/login.html')
 
@@ -293,6 +338,7 @@ from django.shortcuts import render, redirect
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib import messages
 import os
+import binascii
 
 @login_required
 def setup_2fa(request):
@@ -302,16 +348,23 @@ def setup_2fa(request):
     device, created = TOTPDevice.objects.get_or_create(user=user, confirmed=False)
 
     if created or not device.key:
-        # Proper base32 key
-        raw_key = os.urandom(10)  # 80 bits of randomness
-        base32_key = base64.b32encode(raw_key).decode('utf-8').replace('=', '')  # remove padding
-        device.key = base32_key
+        # Generate raw secret (10 bytes = 80 bits)
+        raw_key = os.urandom(10)
+
+        # Store HEX for django-otp
+        hex_key = binascii.hexlify(raw_key).decode()
+        device.key = hex_key
         device.save()
 
-    totp = pyotp.TOTP(device.key)
+    # Convert hex key → base32 for TOTP (pyotp)
+    raw_key_bytes = binascii.unhexlify(device.key)
+    base32_key = base64.b32encode(raw_key_bytes).decode('utf-8').replace('=', '')
+
+    # Generate provisioning URI
+    totp = pyotp.TOTP(base32_key)
     otp_uri = totp.provisioning_uri(name=user.email or user.username, issuer_name="Password Manager")
 
-    # Generate base64 PNG QR
+    # Generate QR Code as base64 PNG
     qr = qrcode.make(otp_uri)
     buffer = BytesIO()
     qr.save(buffer, format='PNG')
@@ -323,11 +376,10 @@ def setup_2fa(request):
         if totp.verify(code):
             device.confirmed = True
             device.save()
-            user.is_2fa_enabled = True  # ✅ Set flag
+            user.is_2fa_enabled = True
             user.save()
             messages.success(request, "2FA has been successfully enabled.")
             return redirect('profile')
-
 
         messages.error(request, "Invalid OTP code. Please try again.")
 
