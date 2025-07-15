@@ -1,10 +1,40 @@
 # vault/views.py
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from .forms import RegisterForm
+from .forms import RegisterForm, CredentialForm, ProfileUpdateForm
 from django.contrib import messages
-from .models import Credential, SecurityLog
+from .models import Credential, SecurityLog, BackupCode, LoginRecord
 from .decorators import two_factor_required
+from django.contrib.auth import get_user_model
+
+from django_otp.plugins.otp_totp.models import TOTPDevice
+
+from django.http import JsonResponse
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.template.loader import render_to_string
+
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+
+from django_otp.decorators import otp_required
+
+import pyotp, qrcode, base64, os, binascii, json, secrets, time
+from io import BytesIO
+
+from django.views.decorators.csrf import csrf_exempt
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+
+
+User = get_user_model()
+
+
+
+# Register view with immediate 2FA setup redirect
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -24,14 +54,9 @@ def register_view(request):
 
     return render(request, 'vault/register.html', {'form': form})
 
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.contrib.auth import get_user_model
-from .models import BackupCode  # make sure this is correct
 
-User = get_user_model()
+
+# Login view with 2FA support
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -88,17 +113,17 @@ def login_view(request):
     return render(request, 'vault/login.html')
 
 
+
+# Logout view
+
+@login_required
 def logout_view(request):
     logout(request)
     return redirect('login')
 
 
 
-from django.http import JsonResponse
-from django.contrib.auth import get_user_model
-User = get_user_model()
-
-from django.views.decorators.csrf import csrf_exempt
+# AJAX view to validate unique fields like username or email
 
 @csrf_exempt
 def validate_field(request):
@@ -113,6 +138,9 @@ def validate_field(request):
     return JsonResponse(response)
 
 
+
+# view to create a new credential
+@login_required
 def create_credential(request):
     if request.method == 'POST':
         # example only — form handling omitted
@@ -128,13 +156,7 @@ def create_credential(request):
 
 
 
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import CredentialForm
-from .models import Credential
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-from django.http import JsonResponse
-from django.template.loader import render_to_string
+# view to render the dashboard with credentials
 
 @login_required
 def dashboard(request):
@@ -157,6 +179,8 @@ def dashboard(request):
 
 
 
+# view to add a new credential
+
 @login_required
 def add_credential(request):
    
@@ -170,6 +194,9 @@ def add_credential(request):
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Add Credential'})
 
 
+
+# view to edit a credential
+
 @login_required
 def edit_credential(request, pk):
 
@@ -181,7 +208,6 @@ def edit_credential(request, pk):
     description=f"Edited credential: {credential.name}"
 )
 
-
     cred = get_object_or_404(Credential, pk=pk, user=request.user)
     if request.method == 'POST':
         form = CredentialForm(request.POST, instance=cred)
@@ -191,6 +217,10 @@ def edit_credential(request, pk):
     else:
         form = CredentialForm(instance=cred)
     return render(request, 'vault/credential_form.html', {'form': form, 'title': 'Edit Credential'})
+
+
+
+# view to delete a credential
 
 @login_required
 @two_factor_required
@@ -211,9 +241,8 @@ def delete_credential(request, pk):
     return render(request, 'vault/delete_confirm.html', {'credential': cred})
 
 
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
-from django.contrib import messages
+
+# Profile settings view
 
 @login_required
 def profile_settings(request):
@@ -225,11 +254,7 @@ def profile_settings(request):
 
 
 
-
-from django.contrib.auth.decorators import login_required
-from .models import LoginRecord, SecurityLog
-from django.contrib.auth.decorators import login_required
-from .models import LoginRecord, SecurityLog
+# User profile view with login history and security logs
 
 @login_required
 def user_profile(request):
@@ -246,6 +271,8 @@ def user_profile(request):
 
 
 
+# Change password view
+
 @login_required
 def change_password(request):
     if request.method == 'POST':
@@ -260,13 +287,8 @@ def change_password(request):
     return render(request, 'account/change_password.html', {'form': form})
 
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from .forms import ProfileUpdateForm
-from .models import SecurityLog
-from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
-from django_otp.decorators import otp_required
+
+# Profile view with 2FA status and update form
 
 @login_required
 @two_factor_required
@@ -291,9 +313,7 @@ def profile_view(request):
 
 
 
-from django.contrib.auth import logout
-from django.contrib import messages
-from django.shortcuts import redirect
+# View to log out due to inactivity
 
 def logout_due_to_inactivity(request):
     logout(request)
@@ -301,7 +321,8 @@ def logout_due_to_inactivity(request):
     return redirect('login')
 
 
-from django_otp.plugins.otp_totp.models import TOTPDevice
+
+# View to toggle 2FA on/off
 
 @login_required
 def toggle_2fa(request):
@@ -318,16 +339,8 @@ def toggle_2fa(request):
         messages.success(request, "2FA settings updated.")
     return redirect('profile')
 
-import pyotp
-import qrcode
-import base64
-from io import BytesIO
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.contrib import messages
-import os
-import binascii
+
+# View to set up 2FA
 
 @login_required
 def setup_2fa(request):
@@ -377,31 +390,22 @@ def setup_2fa(request):
     })
 
 
+
+# View to disable 2FA
+
 @login_required
 def disable_2fa(request):
     user = request.user
     TOTPDevice.objects.filter(user=user).delete()
-    user.is_2fa_enabled = False  # ✅ Unset flag
+    user.is_2fa_enabled = False  # Unset flag
     user.save()
     messages.success(request, "Two-factor authentication has been disabled.")
     return redirect('profile')
 
+
+
 # view to load the 2FA status via AJAX in profile page without page reload
-# from django.http import JsonResponse
-# from django.contrib.auth.decorators import login_required
-
-# @login_required
-# def check_2fa_status(request):
-#     is_enabled = request.user.is_2fa_enabled
-#     return JsonResponse({'is_2fa_enabled': is_enabled})
-
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from django.contrib.auth import get_user_model
-from django_otp.plugins.otp_totp.models import TOTPDevice
+# This view checks if the user has a confirmed TOTP device
 
 @csrf_exempt
 def check_2fa_status(request):
@@ -416,16 +420,9 @@ def check_2fa_status(request):
 
     return JsonResponse({'is_2fa_enabled': is_2fa_enabled})
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json, secrets, time
-from .models import BackupCode
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils import timezone
-from datetime import timedelta
 
+
+# view to send backup code via email
 @csrf_exempt
 def send_backup_code_email(request):
     if request.method == 'POST':
@@ -473,3 +470,39 @@ def send_backup_code_email(request):
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
 
     return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from .models import Credential  # your credential model
+
+User = get_user_model()
+
+@csrf_exempt
+def save_credential_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Only POST allowed'}, status=405)
+
+    api_key = request.headers.get('X-API-KEY')
+    if not api_key:
+        return JsonResponse({'success': False, 'message': 'API key required'}, status=401)
+
+    user = User.objects.filter(api_key=api_key).first()
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Invalid API key'}, status=403)
+
+    import json
+    data = json.loads(request.body)
+
+    Credential.objects.create(
+        user=user,
+        site=data.get('site'),
+        username=data.get('username'),
+        password=data.get('password')  # encrypt this in your real model!
+    )
+
+    return JsonResponse({'success': True})

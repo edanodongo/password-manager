@@ -50,3 +50,16 @@ enc.py
 config.json
 django.txt
 backup/*
+
+# Docker
+.env
+*.env
+*.bak
+postgres_data/
+
+# Compiled stuff
+*.so
+
+# Django migrations 
+**/migrations/*.pyc
+**/migrations/__pycache__/

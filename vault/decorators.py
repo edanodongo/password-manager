@@ -2,6 +2,8 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from functools import wraps
 
+# Two-Factor Authentication (2FA) decorator
+# This decorator checks if the user has 2FA enabled before allowing access to the view.
 def two_factor_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):

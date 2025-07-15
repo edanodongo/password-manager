@@ -3,6 +3,10 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Credential
 
+
+
+# Custom user registration form
+
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True)
 
@@ -11,7 +15,8 @@ class RegisterForm(UserCreationForm):
         fields = ['username', 'email', 'password1', 'password2']
 
 
-from django import forms
+
+# Credential form for adding/editing credentials
 
 class CredentialForm(forms.ModelForm):
     password_raw = forms.CharField(
@@ -33,7 +38,8 @@ class CredentialForm(forms.ModelForm):
         return instance
 
 
-from django import forms
+
+# Profile update form for changing email and password
 
 class ProfileUpdateForm(forms.ModelForm):
     email = forms.EmailField(required=True, label='New Email')
