@@ -16,11 +16,8 @@ services:
     image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    environment:
-      POSTGRES_DB: passmanager
-      POSTGRES_USER: passmanageradmin
-      POSTGRES_PASSWORD: Root@2025*
-
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
