@@ -1,5 +1,4 @@
-version: "3.9"
-
+# File: password-manager/docker-compose.yml
 services:
   web:
     build: .
@@ -18,9 +17,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      POSTGRES_DB: passwordmanager
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: passmanager
+      POSTGRES_USER: passmanageradmin
+      POSTGRES_PASSWORD: Root@2025*
+
 
 volumes:
   postgres_data:
