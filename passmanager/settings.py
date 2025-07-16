@@ -175,8 +175,6 @@ STATICFILES_DIRS = [
 # Only used in production (when running `collectstatic`)
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # This should NOT be the same as STATICFILES_DIRS
 
-import os
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
