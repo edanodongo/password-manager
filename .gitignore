@@ -52,8 +52,6 @@ django.txt
 backup/*
 
 # Docker
-.env
-*.env
 *.bak
 postgres_data/
 
