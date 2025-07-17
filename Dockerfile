@@ -18,8 +18,13 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 # Copy project files
 COPY . /app/
 
+# Copy the wait script and make it executable
+COPY wait-for-postgres.sh /app/wait-for-postgres.sh
+RUN chmod +x /app/wait-for-postgres.sh
+
 # Expose port 8000
 EXPOSE 8000
 
 # Default command
-CMD ["gunicorn", "passmanager.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["./wait-for-postgres.sh", "gunicorn", "passmanager.wsgi:application", "--bind", "0.0.0.0:8000"]
+
