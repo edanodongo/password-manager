@@ -26,5 +26,4 @@ RUN chmod +x /app/wait-for-postgres.sh
 EXPOSE 8000
 
 # Default command
-CMD ["./wait-for-postgres.sh", "gunicorn", "passmanager.wsgi:application", "--bind", "0.0.0.0:8000"]
-
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
