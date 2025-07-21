@@ -3,10 +3,7 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.passman.rule=Host(`password-manager.local`)"
-      - "traefik.http.services.passman.loadbalancer.server.port=8000"
+    container_name: password-manager
     networks:
       - traefik
     env_file:
@@ -27,7 +24,7 @@ services:
 
 networks:
   traefik:
-    external: true
+    name: traefik # Ensure this matches the network used by Traefik
 
 volumes:
   postgres_data:
