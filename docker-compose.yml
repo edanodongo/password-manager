@@ -1,30 +1,47 @@
-# File: password-manager/docker-compose.yml
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
-    container_name: password-manager
-    networks:
-      - traefik
+    container_name: vault_web
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn passmanager.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - .:/app:z
     env_file:
       - .env
-    volumes:
-      - .:/app
+      - .env.docker
     depends_on:
       - db
+    networks:
+      - traefik_proxy
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.http.routers.vault.rule=Host(`vault.local`)"
+      - "traefik.http.routers.vault.entrypoints=web"
+      - "traefik.http.services.vault.loadbalancer.server.port=8000"
+    restart: unless-stopped
 
   db:
-    image: postgres:15
-    networks:         
-      - traefik
+    image: postgres:16
+    container_name: vault_db
+    environment:
+      POSTGRES_DB: ${DB_DEFAULT_NAME}
+      POSTGRES_USER: ${DB_DEFAULT_USER}
+      POSTGRES_PASSWORD: ${DB_DEFAULT_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
-
-networks:
-  traefik:
-    name: traefik # Ensure this matches the network used by Traefik
+      - vault_pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  vault_pgdata:
+
+networks:
+  traefik_proxy:
+    external: true
+  internal:
+  
