@@ -44,4 +44,3 @@ networks:
   traefik_proxy:
     external: true
   internal:
-  
